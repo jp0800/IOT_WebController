@@ -1,6 +1,6 @@
 <script setup>
-import Splash from '@/components/Splash.vue'
-import Details from './components/Details.vue'
+import SplashComponent from '@/components/SplashComponentComponent.vue'
+import DetailsComponent from './components/DetailsComponentComponent.vue'
 </script>
 
 <template>
@@ -8,12 +8,12 @@ import Details from './components/Details.vue'
     <i class="bi bi-bezier2 logo green"></i>
 
     <div class="wrapper">
-      <Details msg="IoT Web Controller"/>
+      <DetailsComponent msg="IoT Web Controller"/>
     </div>
   </header>
 
   <main>
-    <Splash/>
+    <SplashComponent/>
   </main>
 </template>
 
