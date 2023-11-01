@@ -1,6 +1,6 @@
 <script setup>
-import HelloWorld from '@/components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import Splash from '@/components/Splash.vue'
+import Details from './components/Details.vue'
 </script>
 
 <template>
@@ -8,12 +8,12 @@ import TheWelcome from './components/TheWelcome.vue'
     <i class="bi bi-bezier2 logo green"></i>
 
     <div class="wrapper">
-      <HelloWorld msg="IoT Web Controller" />
+      <Details msg="IoT Web Controller"/>
     </div>
   </header>
 
   <main>
-    <TheWelcome />
+    <Splash/>
   </main>
 </template>
 

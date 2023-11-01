@@ -1,8 +1,8 @@
 <script setup>
-import WelcomeItem from '@/components/WelcomeItem.vue'
+import SplashItem from '@/components/SplashItem.vue'
 
-import EcosystemIcon from './icons/IconEcosystem.vue'
 import CommunityIcon from './icons/IconCommunity.vue'
+import EcosystemIcon from './icons/IconEcosystem.vue'
 import SupportIcon from './icons/IconSupport.vue'
 
 import { componentButtonList, componentButtonState, isESP32Connected } from '@/assets/templates.js'
@@ -20,7 +20,7 @@ function toggleButton(modelName) {
 </script>
 
 <template>
-  <WelcomeItem>
+  <SplashItem>
     <template #icon>
       <i class="bi bi-book"></i>
     </template>
@@ -28,9 +28,9 @@ function toggleButton(modelName) {
     Lorem ipsum dolor sit amet consectetur, adipisicing elit. Aperiam quasi tenetur esse optio amet
     eveniet nostrum molestiae animi asperiores et mollitia sed doloremque, incidunt aliquam
     consectetur? Quia alias iusto impedit!
-  </WelcomeItem>
+  </SplashItem>
 
-  <WelcomeItem>
+  <SplashItem>
     <template #icon>
       <i class="bi bi-sliders"></i>
     </template>
@@ -59,9 +59,9 @@ function toggleButton(modelName) {
         <b>{{ item.name }}</b>
       </button>
     </p>
-  </WelcomeItem>
+  </SplashItem>
 
-  <WelcomeItem>
+  <SplashItem>
     <template #icon>
       <EcosystemIcon />
     </template>
@@ -69,9 +69,9 @@ function toggleButton(modelName) {
     Lorem ipsum, dolor sit amet consectetur adipisicing elit. Autem quo blanditiis nobis enim ex
     sint recusandae maxime beatae eum eaque. Necessitatibus vel assumenda architecto exercitationem
     aspernatur optio aliquam facilis ab!
-  </WelcomeItem>
+  </SplashItem>
 
-  <WelcomeItem>
+  <SplashItem>
     <template #icon>
       <CommunityIcon />
     </template>
@@ -79,9 +79,9 @@ function toggleButton(modelName) {
     Lorem ipsum, dolor sit amet consectetur adipisicing elit. Dolor, labore illo culpa tempore
     reprehenderit laboriosam nemo corporis, debitis odit fuga, at quasi perspiciatis omnis!
     Molestiae sequi harum eveniet cupiditate voluptatibus!
-  </WelcomeItem>
+  </SplashItem>
 
-  <WelcomeItem>
+  <SplashItem>
     <template #icon>
       <SupportIcon />
     </template>
@@ -90,7 +90,7 @@ function toggleButton(modelName) {
     Lorem ipsum dolor sit amet consectetur adipisicing elit. Suscipit, commodi minus! Quibusdam
     officia sunt quidem a quae. Quae nisi totam error, blanditiis dicta reprehenderit voluptate, nam
     suscipit distinctio eos debitis.
-  </WelcomeItem>
+  </SplashItem>
 </template>
 
 <style scoped>
