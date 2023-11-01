@@ -36,7 +36,7 @@ function toggleButton(modelName) {
     </template>
     <template #heading>
       Tooling • ESP8266:
-      <span :class="r.isESPConnected ? 'green' : ''">
+      <span class="con-status" :class="r.isESPConnected ? 'green' : ''">
         <b>
           {{ r.isESPConnected ? 'Connected' : 'Disconnected' }}
         </b>
@@ -104,5 +104,7 @@ button > .bi {
   place-items: center;
   margin: 0.5rem;
 }
-
+.con-status {
+  float: right;
+}
 </style>
