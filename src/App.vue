@@ -1,6 +1,6 @@
 <script setup>
 import SplashComponent from '@/components/SplashComponent.vue'
-import DetailsComponent from './components/DetailsComponent.vue'
+import DetailsComponent from '@/components/DetailsComponent.vue'
 </script>
 
 <template>

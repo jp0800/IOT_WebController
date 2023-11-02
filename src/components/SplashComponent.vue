@@ -1,4 +1,7 @@
 <script setup>
+import { cursor, updateESPComponentState, writeDefaultControllerState } from '../assets/firebase'
+import { getDatabase, onValue, set, update } from 'firebase/database'
+
 import SplashItem from '@/components/SplashItem.vue'
 
 import CommunityIcon from './icons/IconCommunity.vue'
@@ -6,16 +9,55 @@ import EcosystemIcon from './icons/IconEcosystem.vue'
 import SupportIcon from './icons/IconSupport.vue'
 
 import { componentButtonList, componentButtonState, isESP32Connected } from '@/assets/templates.js'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
-const r = reactive({
-  componentStates: { ...componentButtonState },
-  isESPConnected: isESP32Connected
+// const espID = 1
+const ESPData = ref({})
+onValue(cursor, (snapshot) => {
+  // const data = snapshot
+
+  /* FOR DEBUGGING */
+  // console.log('SC: Snapshot Data:')
+  // console.log(data.val())
+
+  // console.log('SC: Child Snapshot Data:')
+  /* END */
+
+  snapshot.forEach((childSnapshot) => {
+    if (!childSnapshot.exists()) {
+      alert('SC: ChildSnapshot <- No Data Retrieved')
+      return
+    }
+
+    //Iterator
+    const data = childSnapshot.val()
+
+    ESPData.value[childSnapshot.key] = {
+      id: childSnapshot.key,
+      ...data
+    }
+    // console.log("ESP DATA:")
+    // console.log(ESPData.value)
+    // console.log(Object.keys(ESPData.value).length)
+
+    /* FOR DEBUGGING */
+    // console.log(childSnapshot.key, ':', data)
+    // console.log()
+    /* END */
+  })
+  // console.log("SOME",Object.keys(ESPData.value).length)
 })
 
-function toggleButton(modelName) {
-  r.componentStates[modelName] = !r.componentStates[modelName]
-  console.log(r.componentStates)
+writeDefaultControllerState(Object.keys(ESPData.value).length)
+
+const r = reactive({
+  isESPConnected: isESP32Connected,
+  data: ESPData.value
+})
+
+function toggleButton(id, modelName) {
+  updateESPComponentState(id, modelName, !ESPData.value[id].componentButtonState[modelName])
+  // console.log(ESPData.value[id].componentButtonState[modelName])
 }
 </script>
 
@@ -47,7 +89,22 @@ function toggleButton(modelName) {
       aspernatur ducimus fugiat qui? Natus eius fugiat aliquid consequatur iste. Voluptatibus
       nostrum magni illo incidunt maxime minus exercitationem!
     </p>
-    <p v-for="item in componentButtonList" :key="item.id" class="d-inline-flex gap-1">
+    <span class="button-parent" v-for="comp in r.data" :key="comp.id">
+      <h3>{{ comp.id }}</h3>
+      <p v-for="item in comp.componentButtonList" :key="item.id" class="d-inline-flex gap-1">
+        <button
+          type="button"
+          class="btn"
+          data-bs-toggle="button"
+          :class="comp.componentButtonState[item.model] ? 'green' : ''"
+          @click="toggleButton(comp.id, item.model)"
+        >
+          <i class="bi" :class="item.icon"></i>
+          <b>{{ item.name }}</b>
+        </button>
+      </p>
+    </span>
+    <!-- <p v-for="item in componentButtonList" :key="item.id" class="d-inline-flex gap-1">
       <button
         type="button"
         class="btn"
@@ -58,7 +115,7 @@ function toggleButton(modelName) {
         <i class="bi" :class="item.icon"></i>
         <b>{{ item.name }}</b>
       </button>
-    </p>
+    </p> -->
   </SplashItem>
 
   <SplashItem>
@@ -106,5 +163,8 @@ button > .bi {
 }
 .con-status {
   float: right;
+}
+.button-parent {
+  width: 100%;
 }
 </style>
