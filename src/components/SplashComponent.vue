@@ -76,33 +76,35 @@ function toggleButton(id, modelName) {
     <template #icon>
       <i class="bi bi-sliders"></i>
     </template>
-    <template #heading>
-      Tooling • ESP8266:
-      <span class="con-status" :class="r.isESPConnected ? 'green' : ''">
-        <b>
-          {{ r.isESPConnected ? 'Connected' : 'Disconnected' }}
-        </b>
-      </span>
-    </template>
+    <template #heading> Tooling • ESP8266 </template>
     <p>
       Lorem ipsum dolor sit amet consectetur adipisicing elit. Nostrum, debitis praesentium ullam
       aspernatur ducimus fugiat qui? Natus eius fugiat aliquid consequatur iste. Voluptatibus
       nostrum magni illo incidunt maxime minus exercitationem!
     </p>
-    <span class="button-parent" v-for="comp in r.data" :key="comp.id">
-      <h3>{{ comp.id }}</h3>
-      <p v-for="item in comp.componentButtonList" :key="item.id" class="d-inline-flex gap-1">
-        <button
-          type="button"
-          class="btn"
-          data-bs-toggle="button"
-          :class="comp.componentButtonState[item.model] ? 'green' : ''"
-          @click="toggleButton(comp.id, item.model)"
-        >
-          <i class="bi" :class="item.icon"></i>
-          <b>{{ item.name }}</b>
-        </button>
-      </p>
+    <span class="button-parent overflow-auto">
+      <span v-for="comp in r.data" :key="comp.id">
+        <h3>
+          {{ comp.id }}
+          <span class="con-status" :class="r.isESPConnected ? 'green' : ''">
+            <b>
+              {{ r.isESPConnected ? 'Connected' : 'Disconnected' }}
+            </b>
+          </span>
+        </h3>
+        <p v-for="item in comp.componentButtonList" :key="item.id" class="d-inline-flex gap-1">
+          <button
+            type="button"
+            class="btn"
+            data-bs-toggle="button"
+            :class="comp.componentButtonState[item.model] ? 'green' : ''"
+            @click="toggleButton(comp.id, item.model)"
+          >
+            <i class="bi" :class="item.icon"></i>
+            <b>{{ item.name }}</b>
+          </button>
+        </p>
+      </span>
     </span>
     <!-- <p v-for="item in componentButtonList" :key="item.id" class="d-inline-flex gap-1">
       <button
@@ -152,7 +154,7 @@ function toggleButton(id, modelName) {
 
 <style scoped>
 button > .bi {
-  font-size: 5rem;
+  font-size: 4rem;
 }
 .btn {
   display: flex;
@@ -163,8 +165,21 @@ button > .bi {
 }
 .con-status {
   float: right;
+  font-size: 1rem;
 }
 .button-parent {
+  width: 100%;
+
+  overflow-y: auto;
+  max-height: 20rem;
+  /* background-color: red; */
+  display: block;
+
+  box-shadow: inset 0px 0px 5px 2px rgb(0, 189, 126);
+  border-radius: 0.8rem;
+  padding: 2rem;
+}
+.button-parent > span {
   width: 100%;
 }
 </style>
