@@ -56,18 +56,16 @@ function writeDefaultControllerState(espID) {
 
     const componentButtonList = [
       //sa loob ng ESP tong line na to
-      { name: 'Fan', icon: 'bi-fan', model: `isFanOn${id}` },
-      { name: 'Light', icon: 'bi-lightbulb-fill', model: `isLightOn${id}` },
-      { name: 'Charger', icon: 'bi-lightning-charge-fill', model: `isChargerOn${id}` },
-      { name: 'Outlet', icon: 'bi-plug-fill', model: `isOutletOn${id}` }
+      { name: 'Fan', icon: 'bi-fan', model: `fanESP_${id}` },
+      { name: 'Light', icon: 'bi-lightbulb-fill', model: `lightESP_${id}` },
+      { name: 'Charger', icon: 'bi-lightning-charge-fill', model: `chargerESP_${id}` },
+      { name: 'Outlet', icon: 'bi-plug-fill', model: `outletESP_${id}` }
     ]
     const componentButtonState = {}
-    componentButtonState[`isFanOn${id}`] = false
-    componentButtonState[`isLightOn${id}`] = false
-    componentButtonState[`isChargerOn${id}`] = false
-    componentButtonState[`isOutletOn${id}`] = false
-
-    console.log(id)
+    componentButtonState[`fanESP_${id}`] = { state: false, duration: 0 }
+    componentButtonState[`lightESP_${id}`] = { state: false, duration: 0 }
+    componentButtonState[`chargerESP_${id}`] = { state: false, duration: 0 }
+    componentButtonState[`outletESP_${id}`] = { state: false, duration: 0 }
 
     set(ref(db, `/Controllers/ESP_${id}/componentButtonList`), componentButtonList)
     set(ref(db, `/Controllers/ESP_${id}/componentButtonState`), componentButtonState)
@@ -75,9 +73,30 @@ function writeDefaultControllerState(espID) {
 }
 
 export { tempData, ESPData, writeDefaultControllerState }
+/**
+ *
+ * @param {String} espID the string id of the component
+ * @param {String} modelName the object modelname of the component
+ * @param {Boolean} state state of the component object model
+ *
+ */
 export function updateESPComponentState(espID, modelName, state) {
   const stateUpdate = {}
-  stateUpdate[modelName] = state
+  stateUpdate['state'] = state
   // alert(`${espID} ${modelName} ${state}`)
-  update(ref(db, `/Controllers/${espID}/componentButtonState`), stateUpdate)
+  update(ref(db, `/Controllers/${espID}/componentButtonState/${modelName}`), stateUpdate)
+}
+
+/**
+ *
+ * @param {String} espID the string id of the component
+ * @param {String} modelName the object modelname of the component
+ * @param {Boolean} state state of the component object model
+ *
+ */
+export function updateESPComponentTime(espID, modelName, duration) {
+  const stateUpdate = {}
+  stateUpdate['duration'] = duration
+  // alert(`${espID} ${modelName} ${duration}`)
+  update(ref(db, `/Controllers/${espID}/componentButtonState/${modelName}`), stateUpdate)
 }

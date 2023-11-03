@@ -1,9 +1,9 @@
 const espId = 1;
 const componentButtonList = [ //sa loob ng ESP tong line na to
-  { name: 'Fan', icon: 'bi-fan', model: `isFanOn${espId}` },
-  { name: 'Light', icon: 'bi-lightbulb-fill', model: `isLightOn${espId}` },
-  { name: 'Charger', icon: 'bi-lightning-charge-fill', model: `isChargerOn${espId}` },
-  { name: 'Outlet', icon: 'bi-plug-fill', model: `isOutletOn${espId}` }
+  { name: 'Fan', icon: 'bi-fan', model: `Fan${espId}` },
+  { name: 'Light', icon: 'bi-lightbulb-fill', model: `Light${espId}` },
+  { name: 'Charger', icon: 'bi-lightning-charge-fill', model: `Charger${espId}` },
+  { name: 'Outlet', icon: 'bi-plug-fill', model: `Outlet${espId}` }
 ]
 
 const componentButtonState = {
