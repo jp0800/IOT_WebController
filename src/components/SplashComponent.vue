@@ -1,11 +1,16 @@
 <script setup>
 import {
-  cursor,
+  app,
+  auth,
+  controllerPath,
+  logInUser,
   updateESPComponentState,
   updateESPComponentTime,
-  writeDefaultControllerState
+  writeDefaultControllerState,
+  userIsSignedIn,
+  signInWithEmailAndPassword
 } from '../assets/firebase'
-import { getDatabase, onValue, set, update } from 'firebase/database'
+import { getDatabase, onValue, set, update, ref as dbRef } from 'firebase/database'
 
 import SplashItem from '@/components/SplashItem.vue'
 
@@ -16,55 +21,103 @@ import SupportIcon from './icons/IconSupport.vue'
 import { componentButtonList, componentButtonState, isESP32Connected } from '@/assets/templates.js'
 import { reactive, ref, computed } from 'vue'
 
+const userData = reactive({
+  credentials: {
+    email: '',
+    password: ''
+  },
+  auth: {
+    isUserSignedIn: false
+  }
+})
+
+function accountLogin(email, password) {
+  signInWithEmailAndPassword(auth, email, password)
+    .then((userCredential) => {
+      const user = userCredential.user
+      console.log(user)
+      userData.auth.isUserSignedIn = user ? true : false
+
+      userData.credentials.email = ''
+      userData.credentials.password = ''
+    })
+    .catch((error) => {
+      const errorCode = error.code
+      const errorMessage = error.message
+
+      console.log(errorCode, errorMessage)
+    })
+}
+
+function logout() {
+  auth
+    .signOut()
+    .then(() => {
+      userData.auth.isUserSignedIn = false
+      // Sign-out successful.
+      alert('User logged Out')
+    })
+    .catch((error) => {
+      // An error happened.
+
+      console.log(error)
+    })
+}
+
 //NEED SOMETHING TO RESET THE DATABASE DEFAULT VALUES
 // const espID = 1
 // writeDefaultControllerState(espID)
 
 const ESPData = ref({})
-onValue(cursor, (snapshot) => {
-  // const data = snapshot
-
-  /* FOR DEBUGGING */
-  // console.log('SC: Snapshot Data:')
-  // console.log(data.val())
-
-  // console.log('SC: Child Snapshot Data:')
-  /* END */
-
+onValue(controllerPath, (snapshot) => {
   snapshot.forEach((childSnapshot) => {
     if (!childSnapshot.exists()) {
       alert('SC: ChildSnapshot <- No Data Retrieved')
       return
     }
-
-    //Iterator
     const data = childSnapshot.val()
 
     ESPData.value[childSnapshot.key] = {
       id: childSnapshot.key,
       ...data
     }
-    // console.log("ESP DATA:")
-    // console.log(ESPData.value)
-    // console.log(Object.keys(ESPData.value).length)
-
-    /* FOR DEBUGGING */
-    // console.log(childSnapshot.key, ':', data)
-    // console.log()
-    /* END */
   })
-  // console.log("SOME",Object.keys(ESPData.value).length)
 })
+
+// function getESPComponentTime(espID, modelName){
+onValue(
+  dbRef(getDatabase(app), '/Controllers/ESP_1/componentButtonState/chargerESP_1/duration'),
+  (snapshot) => {
+    const chargerDuration = snapshot.val()
+    if (chargerDuration > 0) {
+      startTimer('ESP_1', snapshot.val(), 'chargerESP_1')
+      updateESPComponentState('ESP_1', 'chargerESP_1', true)
+
+      console.log(snapshot.val())
+    }
+    // snapshot.forEach((childSnapshot) => {
+    //   if (!childSnapshot.exists()) {
+    //     alert('SC: ChildSnapshot <- No Data Retrieved')
+    //     return
+    //   }
+    //   const data = childSnapshot.val()
+    // })
+  }
+)
+// }
 
 const r = reactive({
   isESPConnected: isESP32Connected,
   data: ESPData.value,
   selected: {},
   value: {},
-  display: {},
+  display: {}, // {hrs, min, sec}
   displayTimerId: []
 })
-
+/**
+ * @deprecated
+ * @param {*} modelName
+ */
 function getTime(modelName) {
   let hrs, min, sec
 
@@ -85,9 +138,13 @@ function toggleButton(id, modelName) {
   updateESPComponentTime(id, modelName, 0)
 
   stopTimer(id, modelName)
+  console.log(ESPData.value)
   console.log(ESPData.value[id].componentButtonState[modelName])
 }
-
+/**
+ * @deprecated
+ * @param {*} modelName
+ */
 function stopTimer(modelName) {
   clearInterval(r.displayTimerId[modelName])
 
@@ -95,7 +152,11 @@ function stopTimer(modelName) {
   r.display[`min${modelName}`] = ''
   r.display[`sec${modelName}`] = ''
 }
-
+/**
+ * @deprecated
+ * @param {*} id
+ * @param {*} modelName
+ */
 function setTime(id, modelName) {
   let hours = r.value[`hrs${id}`]
   let minutes = r.value[`min${id}`]
@@ -110,7 +171,12 @@ function setTime(id, modelName) {
   r.value[`hrs${id}`] = ''
   r.value[`min${id}`] = ''
 }
-
+/**
+ * @deprecated
+ * @param {*} id
+ * @param {*} duration
+ * @param {*} modelName
+ */
 function startTimer(id, duration, modelName) {
   var timer = duration,
     hours,
@@ -118,41 +184,79 @@ function startTimer(id, duration, modelName) {
     remainingSeconds,
     seconds
 
-  r.displayTimerId[modelName] = setInterval(function () {
-    hours = Math.floor(timer / 3600)
-    remainingSeconds = timer % 3600
-    minutes = Math.floor(remainingSeconds / 60)
-    seconds = parseInt(timer % 60, 10)
+  // r.displayTimerId[modelName] = setInterval(function () {
+  hours = Math.floor(timer / 3600)
+  remainingSeconds = timer % 3600
+  minutes = Math.floor(remainingSeconds / 60)
+  seconds = parseInt(timer % 60, 10)
 
-    hours = hours < 10 ? '0' + hours : hours
-    minutes = minutes < 10 ? '0' + minutes : minutes
-    seconds = seconds < 10 ? '0' + seconds : seconds
+  hours = hours < 10 ? '0' + hours : hours
+  minutes = minutes < 10 ? '0' + minutes : minutes
+  seconds = seconds < 10 ? '0' + seconds : seconds
 
-    r.display[`hrs${modelName}`] = hours
-    r.display[`min${modelName}`] = minutes
-    r.display[`sec${modelName}`] = seconds
+  r.display[`hrs${modelName}`] = hours
+  r.display[`min${modelName}`] = minutes
+  r.display[`sec${modelName}`] = seconds
 
-    if (--timer < 0) {
-      timer = duration
-      stopTimer(modelName)
-      updateESPComponentTime(id, modelName, 0)
-      updateESPComponentState(id, modelName, false)
-    }
-  }, 1000)
+  if (timer < 0) {
+    timer = duration
+    stopTimer(modelName)
+    // updateESPComponentTime(id, modelName, 0)
+    updateESPComponentState(id, modelName, false)
+  }
+  // }, 1000)
 }
 
-
 /**
- * TODO 
+ * TODO
  * yung nodemcu connection
  * yung timer need sa node mcu manggaling para centralized
- * 
+ *
  * remove all unnecesary comments
  */
 </script>
 
 <template>
   <SplashItem>
+    <template #icon>
+      <i class="bi bi-bezier2 logo green"></i>
+    </template>
+
+    <template #heading> Power Management System </template>
+    <button v-if="userData.auth.isUserSignedIn" @click.prevent="logout" class="sc-logout-button">
+      <i class="bi bi-box-arrow-right"></i> LOGOUT
+    </button>
+    <form
+      v-if="!userData.auth.isUserSignedIn"
+      class="sc-form"
+      @submit.prevent="accountLogin(userData.credentials.email, userData.credentials.password)"
+    >
+      <h4 class="sc-form-title">LOGIN</h4>
+      <label class="sc-label" for="sc-username">Email Address</label>
+      <input
+        v-model.trim="userData.credentials.email"
+        class="sc-input"
+        id="sc-username"
+        type="email"
+        autocomplete="off"
+        required
+      />
+
+      <label class="sc-label" for="sc-password">Password</label>
+      <input
+        v-model.trim="userData.credentials.password"
+        class="sc-input"
+        id="sc-password"
+        type="password"
+        autocomplete="off"
+        required
+      />
+
+      <button class="sc-button">Login</button>
+    </form>
+  </SplashItem>
+
+  <SplashItem v-if="userData.auth.isUserSignedIn">
     <template #icon>
       <i class="bi bi-book"></i>
     </template>
@@ -162,7 +266,7 @@ function startTimer(id, duration, modelName) {
     consectetur? Quia alias iusto impedit!
   </SplashItem>
 
-  <SplashItem>
+  <SplashItem v-if="userData.auth.isUserSignedIn">
     <template #icon>
       <i class="bi bi-sliders"></i>
     </template>
@@ -252,7 +356,7 @@ function startTimer(id, duration, modelName) {
     </span>
   </SplashItem>
 
-  <SplashItem>
+  <SplashItem v-if="userData.auth.isUserSignedIn">
     <template #icon>
       <EcosystemIcon />
     </template>
@@ -262,7 +366,7 @@ function startTimer(id, duration, modelName) {
     aspernatur optio aliquam facilis ab!
   </SplashItem>
 
-  <SplashItem>
+  <SplashItem v-if="userData.auth.isUserSignedIn">
     <template #icon>
       <CommunityIcon />
     </template>
@@ -272,7 +376,7 @@ function startTimer(id, duration, modelName) {
     Molestiae sequi harum eveniet cupiditate voluptatibus!
   </SplashItem>
 
-  <SplashItem>
+  <SplashItem v-if="userData.auth.isUserSignedIn">
     <template #icon>
       <SupportIcon />
     </template>
@@ -285,8 +389,83 @@ function startTimer(id, duration, modelName) {
 </template>
 
 <style scoped>
+.sc-logout-button {
+  background-color: transparent;
+  padding: 0.5rem;
+
+  outline: none;
+  border: none;
+  transition: 0.4s ease;
+
+  color: white;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.sc-logout-button:hover {
+  box-shadow: inset 0px 0px 5px 2px #00bd7e;
+}
+
+.bi.bi-box-arrow-right {
+  font-size: 2rem;
+  color: #00bd7e;
+}
+.sc-form {
+  max-width: 20rem;
+  box-shadow: inset 0px 0px 5px 2px #00bd7e;
+  display: flex;
+  flex-direction: column;
+
+  padding: 2rem;
+  margin: 2.5rem 0;
+
+  border-radius: 0.8rem;
+}
+.sc-form-title{
+  margin-bottom: 1rem;
+}
+.sc-label {
+  font-size: 0.9rem;
+  font-weight: bold;
+
+  text-transform: lowercase;
+}
+.sc-input {
+  margin-bottom: 1rem;
+  padding: 0.2rem;
+
+  border-radius: 0.4rem;
+}
+
+.sc-button {
+  border-radius: 0.4rem;
+
+  padding: 0.5rem;
+  margin-top: 1.5rem;
+
+  font-weight: bold;
+  text-transform: uppercase;
+
+  background-color: transparent;
+  border: 5px solid rgb(0, 189, 126);
+
+  color: rgb(0, 189, 126);
+  transition: 0.4s ease;
+}
+
+.sc-button:hover {
+  box-shadow: 0px 0px 5px 1px rgb(0, 189, 126);
+}
 button > .bi {
   font-size: 4rem;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .btn {
   display: flex;
@@ -303,11 +482,6 @@ button > .bi {
   font-size: 1rem;
 }
 
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
 .form {
   display: flex;
   flex-wrap: wrap;

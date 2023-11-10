@@ -1,19 +1,30 @@
 <script setup>
 import SplashComponent from '@/components/SplashComponent.vue'
 import DetailsComponent from '@/components/DetailsComponent.vue'
+import LoginComponent from './components/LoginComponent.vue'
+import { reactive } from 'vue'
+
+const pageData = reactive({
+  userIsLoggedIn: false
+})
+
+function getEmmited(isLoggedIn) {
+  pageData.userIsLoggedIn = isLoggedIn
+  alert('SOME')
+}
 </script>
 
 <template>
   <header>
     <i class="bi bi-bezier2 logo green"></i>
-
     <div class="wrapper">
-      <DetailsComponent msg="IoT Web Controller"/>
+      <DetailsComponent msg="IoT Web Controller" />
     </div>
   </header>
 
   <main>
-    <SplashComponent/>
+    <SplashComponent v-if="pageData.userIsLoggedIn" />
+    <LoginComponent v-else @lc-user-signed-in="getEmmited" />
   </main>
 </template>
 
@@ -25,8 +36,7 @@ header {
 .logo {
   display: block;
   text-align: center;
-  margin: 0 auto 2rem;
-  font-size: 8rem;
+  font-size: 4rem;
 }
 
 @media (min-width: 1024px) {
@@ -37,7 +47,7 @@ header {
   }
 
   .logo {
-    margin: 0 2rem 0 0;
+    margin: 0 1.5rem 0 0;
   }
 
   header .wrapper {

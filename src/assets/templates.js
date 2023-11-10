@@ -1,3 +1,5 @@
+/**@deprecated */
+
 const espId = 1;
 const componentButtonList = [ //sa loob ng ESP tong line na to
   { name: 'Fan', icon: 'bi-fan', model: `Fan${espId}` },

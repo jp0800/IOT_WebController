@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app'
+import { getAuth } from 'firebase/auth'
 import { ref, getDatabase, onValue, set, update } from 'firebase/database'
 
+/* INITIALIZE DATABASE */
 const firebaseConfig = {
   apiKey: 'AIzaSyBdoIbJ4Pv8pBhdNjXonNEbB4BFmRLjroI',
   authDomain: 'homeautomation-4af1c.firebaseapp.com',
@@ -12,47 +14,20 @@ const firebaseConfig = {
   measurementId: 'G-MWJNR1EQRF'
 }
 
-initializeApp(firebaseConfig)
+const app = initializeApp(firebaseConfig)
+const auth = getAuth(app)
+auth.useDeviceLanguage()
 
-const db = getDatabase()
-const espID = 1
-console.log()
-export const cursor = ref(db, '/Controllers') //`/ESP_${espID}/componentButtonList`) ////
+const db = getDatabase(app)
 
-let tempData
-let ESPData = {}
+const controllerPath = ref(db, '/Controllers')
 
-// onValue(cursor, (snapshot) => {
-//   const data = snapshot
+/* INITIALIZE AUTHENTICATION */
 
-//   /* FOR DEBUGGING */
-//   console.log('SC: Snapshot Data:')
-//   console.log(data.val())
-
-//   ESPData[`ESP_${espID}`] = data.val()
-//   console.log(ESPData)
-//   console.log('SC: Child Snapshot Data:')
-//   /* END */
-
-//   snapshot.forEach((childSnapshot) => {
-//     if (!childSnapshot.exists()) {
-//       alert('SC: ChildSnapshot <- No Data Retrieved')
-//       return
-//     }
-
-//     //Iterator
-//     const data = childSnapshot.val()
-//     /* FOR DEBUGGING */
-//     console.log(childSnapshot.key, ':', data)
-//     console.log()
-//     /* END */
-//   })
-// })
-
+/* FUNCTIONS */
 function writeDefaultControllerState(espID) {
   for (let i = 0; i < espID; i++) {
     let id = i + 1
-    // const db = getDatabase()
 
     const componentButtonList = [
       //sa loob ng ESP tong line na to
@@ -72,7 +47,6 @@ function writeDefaultControllerState(espID) {
   }
 }
 
-export { tempData, ESPData, writeDefaultControllerState }
 /**
  *
  * @param {String} espID the string id of the component
@@ -80,7 +54,7 @@ export { tempData, ESPData, writeDefaultControllerState }
  * @param {Boolean} state state of the component object model
  *
  */
-export function updateESPComponentState(espID, modelName, state) {
+function updateESPComponentState(espID, modelName, state) {
   const stateUpdate = {}
   stateUpdate['state'] = state
   // alert(`${espID} ${modelName} ${state}`)
@@ -94,9 +68,31 @@ export function updateESPComponentState(espID, modelName, state) {
  * @param {Boolean} state state of the component object model
  *
  */
-export function updateESPComponentTime(espID, modelName, duration) {
+function updateESPComponentTime(espID, modelName, duration) {
   const stateUpdate = {}
   stateUpdate['duration'] = duration
   // alert(`${espID} ${modelName} ${duration}`)
   update(ref(db, `/Controllers/${espID}/componentButtonState/${modelName}`), stateUpdate)
 }
+
+import { signInWithEmailAndPassword } from 'firebase/auth'
+let userIsSignedIn = false
+
+function logInUser(email, password) {
+  signInWithEmailAndPassword(auth, email, password)
+    .then((userCredential) => {
+      let user = userCredential.user
+      userIsSignedIn = user ? true : false
+      console.log(userIsSignedIn)
+      return user;
+    })
+    .catch((error) => {
+      const errorCode = error.code
+      const errorMessage = error.message
+
+      console.log(errorCode, errorMessage)
+    })
+}
+
+export { app, db, auth, controllerPath, userIsSignedIn, logInUser }
+export { updateESPComponentState, updateESPComponentTime, writeDefaultControllerState, signInWithEmailAndPassword }
