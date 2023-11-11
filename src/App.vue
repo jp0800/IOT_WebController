@@ -8,9 +8,12 @@ const pageData = reactive({
   userIsLoggedIn: false
 })
 
-function getEmmited(isLoggedIn) {
+function setUserIsLoggedIn(isLoggedIn) {
   pageData.userIsLoggedIn = isLoggedIn
-  alert('SOME')
+}
+
+function setUserIsLoggedOut(isLoggedIn) {
+  pageData.userIsLoggedIn = isLoggedIn
 }
 </script>
 
@@ -23,8 +26,8 @@ function getEmmited(isLoggedIn) {
   </header>
 
   <main>
-    <SplashComponent v-if="pageData.userIsLoggedIn" />
-    <LoginComponent v-else @lc-user-signed-in="getEmmited" />
+    <SplashComponent v-if="pageData.userIsLoggedIn" @sc-user-logout="setUserIsLoggedOut"/>
+    <LoginComponent v-else @lc-user-signed-in="setUserIsLoggedIn" />
   </main>
 </template>
 

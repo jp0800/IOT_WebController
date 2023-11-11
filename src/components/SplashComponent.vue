@@ -3,72 +3,33 @@ import {
   app,
   auth,
   controllerPath,
-  logInUser,
   updateESPComponentState,
   updateESPComponentTime,
   writeDefaultControllerState,
-  userIsSignedIn,
-  signInWithEmailAndPassword
+  updateESPManualControl
 } from '../assets/firebase'
-import { getDatabase, onValue, set, update, ref as dbRef } from 'firebase/database'
+import { getDatabase, onValue, ref as dbRef } from 'firebase/database'
 
 import SplashItem from '@/components/SplashItem.vue'
 
-import CommunityIcon from './icons/IconCommunity.vue'
-import EcosystemIcon from './icons/IconEcosystem.vue'
-import SupportIcon from './icons/IconSupport.vue'
+import { reactive, ref} from 'vue'
 
-import { componentButtonList, componentButtonState, isESP32Connected } from '@/assets/templates.js'
-import { reactive, ref, computed } from 'vue'
-
-const userData = reactive({
-  credentials: {
-    email: '',
-    password: ''
-  },
-  auth: {
-    isUserSignedIn: false
-  }
-})
-
-function accountLogin(email, password) {
-  signInWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      const user = userCredential.user
-      console.log(user)
-      userData.auth.isUserSignedIn = user ? true : false
-
-      userData.credentials.email = ''
-      userData.credentials.password = ''
-    })
-    .catch((error) => {
-      const errorCode = error.code
-      const errorMessage = error.message
-
-      console.log(errorCode, errorMessage)
-    })
-}
+const emitter = defineEmits(['scUserLogout'])
 
 function logout() {
   auth
     .signOut()
     .then(() => {
-      userData.auth.isUserSignedIn = false
-      // Sign-out successful.
+      emitter('scUserLogout', false)
       alert('User logged Out')
     })
     .catch((error) => {
-      // An error happened.
-
-      console.log(error)
+      alert(error)
     })
 }
 
-//NEED SOMETHING TO RESET THE DATABASE DEFAULT VALUES
-// const espID = 1
-// writeDefaultControllerState(espID)
-
 const ESPData = ref({})
+
 onValue(controllerPath, (snapshot) => {
   snapshot.forEach((childSnapshot) => {
     if (!childSnapshot.exists()) {
@@ -81,39 +42,78 @@ onValue(controllerPath, (snapshot) => {
       id: childSnapshot.key,
       ...data
     }
+
+    console.log(ESPData.value)
   })
 })
 
-// function getESPComponentTime(espID, modelName){
 onValue(
   dbRef(getDatabase(app), '/Controllers/ESP_1/componentButtonState/chargerESP_1/duration'),
   (snapshot) => {
     const chargerDuration = snapshot.val()
     if (chargerDuration > 0) {
-      startTimer('ESP_1', snapshot.val(), 'chargerESP_1')
+      normalizeTimeData('ESP_1', snapshot.val(), 'chargerESP_1')
       updateESPComponentState('ESP_1', 'chargerESP_1', true)
-
-      console.log(snapshot.val())
     }
-    // snapshot.forEach((childSnapshot) => {
-    //   if (!childSnapshot.exists()) {
-    //     alert('SC: ChildSnapshot <- No Data Retrieved')
-    //     return
-    //   }
-    //   const data = childSnapshot.val()
-    // })
   }
 )
-// }
+onValue(
+  dbRef(getDatabase(app), '/Controllers/ESP_1/componentButtonState/fanESP_1/duration'),
+  (snapshot) => {
+    const chargerDuration = snapshot.val()
+    if (chargerDuration > 0) {
+      normalizeTimeData('ESP_1', snapshot.val(), 'fanESP_1')
+      updateESPComponentState('ESP_1', 'fanESP_1', true)
+    }
+  }
+)
+onValue(
+  dbRef(getDatabase(app), '/Controllers/ESP_1/componentButtonState/lightESP_1/duration'),
+  (snapshot) => {
+    const chargerDuration = snapshot.val()
+    if (chargerDuration > 0) {
+      normalizeTimeData('ESP_1', snapshot.val(), 'lightESP_1')
+      updateESPComponentState('ESP_1', 'lightESP_1', true)
+    }
+  }
+)
+onValue(
+  dbRef(getDatabase(app), '/Controllers/ESP_1/componentButtonState/outletESP_1/duration'),
+  (snapshot) => {
+    const chargerDuration = snapshot.val()
+    if (chargerDuration > 0) {
+      normalizeTimeData('ESP_1', snapshot.val(), 'outletESP_1')
+      updateESPComponentState('ESP_1', 'outletESP_1', true)
+    }
+  }
+)
 
 const r = reactive({
-  isESPConnected: isESP32Connected,
+  isESPConnected: {},
   data: ESPData.value,
-  selected: {},
-  value: {},
+  dropDownSelected: {},
+  inputValue: {},
   display: {}, // {hrs, min, sec}
-  displayTimerId: []
+  displayTimerId: [],
+  isManualOn: {}
 })
+
+function toggleManualControl(id) {
+  if (r.isManualOn[id] === undefined) {
+    r.isManualOn[id] = true
+
+    console.log(r.isManualOn)
+  } else {
+    r.isManualOn[id] = !r.isManualOn[id]
+  }
+  
+  updateESPManualControl(id,r.isManualOn[id])
+
+  if(r.isManualOn[id] === false){
+    writeDefaultControllerState(1)
+    updateESPManualControl(id,false)
+  }
+}
 /**
  * @deprecated
  * @param {*} modelName
@@ -126,6 +126,7 @@ function getTime(modelName) {
   sec = r.display[`sec${modelName}`]
 
   if (isNaN(Number(hrs)) && isNaN(Number(min)) && isNaN(Number(sec))) return ''
+  if (Number(hrs) === 0 && Number(min) === 0 && Number(sec) <= 1 ) return ''
   if (hrs === '' && min === '' && sec === '') return ''
 
   return `${hrs} : ${min} : ${sec}`
@@ -133,21 +134,24 @@ function getTime(modelName) {
 
 writeDefaultControllerState(Object.keys(ESPData.value).length)
 
-function toggleButton(id, modelName) {
-  updateESPComponentState(id, modelName, false)
+function toggleApplianceButton(id, modelName) {
+  if (r.isManualOn[id]) {
+    updateESPComponentState(id, modelName, !ESPData.value[id].componentButtonState[modelName].state)
+    stopTimer(id, modelName)
+  } else {
+    updateESPComponentState(id, modelName, false)
+  }
   updateESPComponentTime(id, modelName, 0)
 
-  stopTimer(id, modelName)
+  console.log(id)
   console.log(ESPData.value)
   console.log(ESPData.value[id].componentButtonState[modelName])
 }
+
 /**
- * @deprecated
  * @param {*} modelName
  */
 function stopTimer(modelName) {
-  clearInterval(r.displayTimerId[modelName])
-
   r.display[`hrs${modelName}`] = ''
   r.display[`min${modelName}`] = ''
   r.display[`sec${modelName}`] = ''
@@ -158,33 +162,31 @@ function stopTimer(modelName) {
  * @param {*} modelName
  */
 function setTime(id, modelName) {
-  let hours = r.value[`hrs${id}`]
-  let minutes = r.value[`min${id}`]
+  let hours = r.inputValue[`hrs${id}`]
+  let minutes = r.inputValue[`min${id}`]
 
   let duration = hours * 3600 + minutes * 60
   updateESPComponentTime(id, modelName, duration)
   updateESPComponentState(id, modelName, true)
 
-  stopTimer(modelName)
-  startTimer(id, duration, modelName)
+  normalizeTimeData(id, duration, modelName)
 
-  r.value[`hrs${id}`] = ''
-  r.value[`min${id}`] = ''
+  r.inputValue[`hrs${id}`] = ''
+  r.inputValue[`min${id}`] = ''
 }
 /**
- * @deprecated
+ *
  * @param {*} id
  * @param {*} duration
  * @param {*} modelName
  */
-function startTimer(id, duration, modelName) {
+function normalizeTimeData(id, duration, modelName) {
   var timer = duration,
     hours,
     minutes,
     remainingSeconds,
     seconds
 
-  // r.displayTimerId[modelName] = setInterval(function () {
   hours = Math.floor(timer / 3600)
   remainingSeconds = timer % 3600
   minutes = Math.floor(remainingSeconds / 60)
@@ -198,13 +200,9 @@ function startTimer(id, duration, modelName) {
   r.display[`min${modelName}`] = minutes
   r.display[`sec${modelName}`] = seconds
 
-  if (timer < 0) {
-    timer = duration
-    stopTimer(modelName)
-    // updateESPComponentTime(id, modelName, 0)
+  if (timer === 1) {
     updateESPComponentState(id, modelName, false)
   }
-  // }, 1000)
 }
 
 /**
@@ -217,46 +215,10 @@ function startTimer(id, duration, modelName) {
 </script>
 
 <template>
-  <SplashItem>
-    <template #icon>
-      <i class="bi bi-bezier2 logo green"></i>
-    </template>
-
-    <template #heading> Power Management System </template>
-    <button v-if="userData.auth.isUserSignedIn" @click.prevent="logout" class="sc-logout-button">
-      <i class="bi bi-box-arrow-right"></i> LOGOUT
-    </button>
-    <form
-      v-if="!userData.auth.isUserSignedIn"
-      class="sc-form"
-      @submit.prevent="accountLogin(userData.credentials.email, userData.credentials.password)"
-    >
-      <h4 class="sc-form-title">LOGIN</h4>
-      <label class="sc-label" for="sc-username">Email Address</label>
-      <input
-        v-model.trim="userData.credentials.email"
-        class="sc-input"
-        id="sc-username"
-        type="email"
-        autocomplete="off"
-        required
-      />
-
-      <label class="sc-label" for="sc-password">Password</label>
-      <input
-        v-model.trim="userData.credentials.password"
-        class="sc-input"
-        id="sc-password"
-        type="password"
-        autocomplete="off"
-        required
-      />
-
-      <button class="sc-button">Login</button>
-    </form>
-  </SplashItem>
-
-  <SplashItem v-if="userData.auth.isUserSignedIn">
+  <button @click.prevent="logout" class="sc-logout-button">
+    <i class="bi bi-box-arrow-right"></i> LOGOUT
+  </button>
+  <!-- <SplashItem>
     <template #icon>
       <i class="bi bi-book"></i>
     </template>
@@ -264,18 +226,18 @@ function startTimer(id, duration, modelName) {
     Lorem ipsum dolor sit amet consectetur, adipisicing elit. Aperiam quasi tenetur esse optio amet
     eveniet nostrum molestiae animi asperiores et mollitia sed doloremque, incidunt aliquam
     consectetur? Quia alias iusto impedit!
-  </SplashItem>
+  </SplashItem> -->
 
-  <SplashItem v-if="userData.auth.isUserSignedIn">
+  <SplashItem>
     <template #icon>
       <i class="bi bi-sliders"></i>
     </template>
     <template #heading> Tooling • ESP8266 </template>
-    <p>
+    <!-- <p>
       Lorem ipsum dolor sit amet consectetur adipisicing elit. Nostrum, debitis praesentium ullam
       aspernatur ducimus fugiat qui? Natus eius fugiat aliquid consequatur iste. Voluptatibus
       nostrum magni illo incidunt maxime minus exercitationem!
-    </p>
+    </p> -->
     <span class="component-header overflow-auto">
       <span v-for="comp in r.data" :key="comp.id">
         <h3>
@@ -290,7 +252,7 @@ function startTimer(id, duration, modelName) {
           <form
             class="form"
             @keypress.enter.prevent
-            @submit.prevent="setTime(comp.id, r.selected[`component${comp.id}`])"
+            @submit.prevent="setTime(comp.id, r.dropDownSelected[`component${comp.id}`])"
           >
             <div class="form-input-group">
               <input
@@ -300,7 +262,7 @@ function startTimer(id, duration, modelName) {
                 max="24"
                 min="0"
                 :id="`hrs${comp.id}`"
-                v-model="r.value[`hrs${comp.id}`]"
+                v-model="r.inputValue[`hrs${comp.id}`]"
                 required
               />
               <label :for="`hrs${comp.id}`">hrs</label> :
@@ -311,7 +273,7 @@ function startTimer(id, duration, modelName) {
                 max="59"
                 min="0"
                 :id="`min${comp.id}`"
-                v-model="r.value[`min${comp.id}`]"
+                v-model="r.inputValue[`min${comp.id}`]"
                 required
               />
               <label :for="`min${comp.id}`">mins</label>
@@ -320,7 +282,7 @@ function startTimer(id, duration, modelName) {
               <label :for="`component${comp.id}`">Component:</label>
               <select
                 class="form-dropdown"
-                v-model="r.selected[`component${comp.id}`]"
+                v-model="r.dropDownSelected[`component${comp.id}`]"
                 name="component"
                 :id="`component${comp.id}`"
                 required
@@ -332,9 +294,16 @@ function startTimer(id, duration, modelName) {
               </select>
             </div>
             <div class="form-button-group">
-              <button class="form-button">Set</button>
+              <button class="form-button" :disabled="r.isManualOn[comp.id]">Set</button>
             </div>
           </form>
+          <button
+            class="form-button"
+            :class="r.isManualOn[comp.id] ? 'green' : ''"
+            @click="toggleManualControl(comp.id)"
+          >
+            Manual: {{ r.isManualOn[comp.id] ? 'on' : 'off' }}
+          </button>
         </div>
         <div class="component-button-container">
           <div v-for="item in comp.componentButtonList" :key="item.id">
@@ -342,9 +311,9 @@ function startTimer(id, duration, modelName) {
               type="button"
               class="btn"
               data-bs-toggle="button"
-              @click="toggleButton(comp.id, item.model)"
+              @click="toggleApplianceButton(comp.id, item.model)"
               :class="comp.componentButtonState[item.model].state ? 'green' : ''"
-              :disabled="!comp.componentButtonState[item.model].state"
+              :disabled="!comp.componentButtonState[item.model].state && !r.isManualOn[comp.id]"
             >
               <i class="bi" :class="item.icon"></i>
               <b>{{ item.name }}</b>
@@ -356,7 +325,7 @@ function startTimer(id, duration, modelName) {
     </span>
   </SplashItem>
 
-  <SplashItem v-if="userData.auth.isUserSignedIn">
+  <!-- <SplashItem>
     <template #icon>
       <EcosystemIcon />
     </template>
@@ -364,9 +333,9 @@ function startTimer(id, duration, modelName) {
     Lorem ipsum, dolor sit amet consectetur adipisicing elit. Autem quo blanditiis nobis enim ex
     sint recusandae maxime beatae eum eaque. Necessitatibus vel assumenda architecto exercitationem
     aspernatur optio aliquam facilis ab!
-  </SplashItem>
+  </SplashItem> -->
 
-  <SplashItem v-if="userData.auth.isUserSignedIn">
+  <!-- <SplashItem>
     <template #icon>
       <CommunityIcon />
     </template>
@@ -374,89 +343,54 @@ function startTimer(id, duration, modelName) {
     Lorem ipsum, dolor sit amet consectetur adipisicing elit. Dolor, labore illo culpa tempore
     reprehenderit laboriosam nemo corporis, debitis odit fuga, at quasi perspiciatis omnis!
     Molestiae sequi harum eveniet cupiditate voluptatibus!
-  </SplashItem>
+  </SplashItem> -->
 
-  <SplashItem v-if="userData.auth.isUserSignedIn">
+  <!-- <SplashItem>
     <template #icon>
       <SupportIcon />
     </template>
-    <template #heading><a href="">Developers</a></template>
+    <template #heading>Developers</template>
 
     Lorem ipsum dolor sit amet consectetur adipisicing elit. Suscipit, commodi minus! Quibusdam
     officia sunt quidem a quae. Quae nisi totam error, blanditiis dicta reprehenderit voluptate, nam
     suscipit distinctio eos debitis.
-  </SplashItem>
+  </SplashItem> -->
 </template>
 
 <style scoped>
 .sc-logout-button {
-  background-color: transparent;
-  padding: 0.5rem;
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+
+  background-color: #222222;
+  color: white;
+  
+  padding: 0.2rem 0.7rem;
 
   outline: none;
   border: none;
-  transition: 0.4s ease;
-
-  color: white;
+  border-radius: 1rem;
+  
   display: flex;
   gap: 1rem;
-  justify-content: center;
   align-items: center;
+  z-index: 1;
+
+  max-width: 3rem;
+  overflow: hidden;
+
+  transition: 0.3s cubic-bezier(0.445, 0.05, 0.55, 0.95);
 }
 
 .sc-logout-button:hover {
-  box-shadow: inset 0px 0px 5px 2px #00bd7e;
+  box-shadow: 0px 0px 5px 2px #00bd7e;
+  max-width: 10rem;
 }
 
 .bi.bi-box-arrow-right {
   font-size: 2rem;
   color: #00bd7e;
-}
-.sc-form {
-  max-width: 20rem;
-  box-shadow: inset 0px 0px 5px 2px #00bd7e;
-  display: flex;
-  flex-direction: column;
-
-  padding: 2rem;
-  margin: 2.5rem 0;
-
-  border-radius: 0.8rem;
-}
-.sc-form-title{
-  margin-bottom: 1rem;
-}
-.sc-label {
-  font-size: 0.9rem;
-  font-weight: bold;
-
-  text-transform: lowercase;
-}
-.sc-input {
-  margin-bottom: 1rem;
-  padding: 0.2rem;
-
-  border-radius: 0.4rem;
-}
-
-.sc-button {
-  border-radius: 0.4rem;
-
-  padding: 0.5rem;
-  margin-top: 1.5rem;
-
-  font-weight: bold;
-  text-transform: uppercase;
-
-  background-color: transparent;
-  border: 5px solid rgb(0, 189, 126);
-
-  color: rgb(0, 189, 126);
-  transition: 0.4s ease;
-}
-
-.sc-button:hover {
-  box-shadow: 0px 0px 5px 1px rgb(0, 189, 126);
 }
 button > .bi {
   font-size: 4rem;
