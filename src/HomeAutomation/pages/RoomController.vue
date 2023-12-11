@@ -1,0 +1,442 @@
+<template>
+  <div class="rc-parent">
+    <a class="rc-container" href="" @click.prevent="showController">
+      <div class="rc-room-header">
+        <h1>{{ props.title }}</h1>
+      </div>
+      <div class="rc-room-active">
+        <div>
+          <i class="bi bi-fan"></i>
+          <p v-if="events.input.selected !== 'manual'">{{ differenceToString(events.componentStatus.fanStatus.difference) }}</p>
+          <p v-else>{{ events.componentStatus.fanStatus.indefiniteOn ? "On" : "Off" }}</p>
+        </div>
+        <div>
+          <i class="bi bi-lightbulb-fill"></i>
+          <p v-if="events.input.selected !== 'manual'">
+            {{ differenceToString(events.componentStatus.lightStatus.difference) }}
+          </p>
+          <p v-else>{{ events.componentStatus.lightStatus.indefiniteOn ? "On" : "Off" }}</p>
+        </div>
+        <div>
+          <i class="bi bi-lightning-charge-fill"></i>
+          <p v-if="events.input.selected !== 'manual'">
+            {{ differenceToString(events.componentStatus.chargerStatus.difference) }}
+          </p>
+          <p v-else>{{ events.componentStatus.chargerStatus.indefiniteOn ? "On" : "Off" }}</p>
+        </div>
+        <div>
+          <i class="bi bi-plug-fill"></i>
+          <p v-if="events.input.selected !== 'manual'">
+            {{ differenceToString(events.componentStatus.outletStatus.difference) }}
+          </p>
+          <p v-else>{{ events.componentStatus.outletStatus.indefiniteOn ? "On" : "Off" }}</p>
+        </div>
+      </div>
+      <div class="rc-room-notification">
+        <p class="rc-room-disconnected"></p>
+      </div>
+    </a>
+    <div v-if="events.showController" class="rc-set-container">
+      <form class="rc-set-form" @submit.prevent="setComponentStatus(events.input)">
+        <div>
+          <label for="rc-set-components" class="rc-set-component-label rc-set-label"
+            >Component</label
+          >
+          <select
+            v-model="events.input.selected"
+            name="rc-set-components"
+            id="rc-set-components"
+            required
+          >
+            <option value="manual">Manual</option>
+            <option value="lightStatus">Light</option>
+            <option value="fanStatus">Fan</option>
+            <option value="outletStatus">Outlet</option>
+            <option value="chargerStatus">Charger</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div v-if="events.input.selected !== 'manual'">
+          <label for="rc-set-hrs" class="rc-set-label">Hour(s)</label>
+          <input
+            id="rc-set-hrs"
+            v-model="events.input.hrs"
+            class="rc-set-time"
+            type="number"
+            min="0"
+            max="24"
+            required
+          />
+          <label for="rc-set-min" class="rc-set-label">Minute(s)</label>
+          <input
+            id="rc-set-min"
+            v-model="events.input.mins"
+            class="rc-set-time"
+            type="number"
+            min="0"
+            max="59"
+            required
+          />
+          <label for="rc-set-sec" class="rc-set-label">Second(s)</label>
+          <input
+            id="rc-set-sec"
+            v-model="events.input.secs"
+            class="rc-set-time"
+            type="number"
+            min="0"
+            max="59"
+            required
+          />
+        </div>
+        <div v-else class="rc-set-manual">
+          <button @click.prevent="toggleComponentStatus('fanStatus')">
+            <i class="bi bi-fan"></i><br />Fan
+          </button>
+          <button @click.prevent="toggleComponentStatus('lightStatus')">
+            <i class="bi bi-lightbulb-fill"></i><br />Light
+          </button>
+          <button @click.prevent="toggleComponentStatus('chargerStatus')">
+            <i class="bi bi-lightning-charge-fill"></i><br />Charger
+          </button>
+          <button @click.prevent="toggleComponentStatus('outletStatus')">
+            <i class="bi bi-plug-fill"></i><br />Outlet
+          </button>
+        </div>
+
+        <button v-if="events.input.selected !== 'manual'" class="rc-set-button">Set</button>
+      </form>
+    </div>
+  </div>
+</template>
+<script setup>
+import { reactive } from 'vue'
+import { getFutureTime, getTimeDifference, differenceToString } from '../res/utility'
+import { app, apiPOST } from '../res/firebase'
+
+import { getDatabase, onValue, ref as dbRef } from 'firebase/database'
+
+const props = defineProps({
+  title: {
+    type: String,
+    required: true
+  },
+  id: {
+    type: String,
+    required: true
+  }
+})
+
+const events = reactive({
+  showController: false,
+  input: {
+    selected: '',
+    hrs: 0,
+    mins: 0,
+    secs: 0
+  },
+  componentStatus: {
+    fanStatus: {
+      name: 'fanStatus',
+      reference: { date: '', time: '' },
+      difference: { hours: 0, minutes: 0, seconds: 0 },
+      indefiniteOn: false
+    },
+    lightStatus: {
+      name: 'lightStatus',
+      reference: { date: '', time: '' },
+      difference: { hours: 0, minutes: 0, seconds: 0 },
+      indefiniteOn: false
+    },
+    outletStatus: {
+      name: 'outletStatus',
+      reference: { date: '', time: '' },
+      difference: { hours: 0, minutes: 0, seconds: 0 },
+      indefiniteOn: false
+    },
+    chargerStatus: {
+      name: 'chargerStatus',
+      reference: { date: '', time: '' },
+      difference: { hours: 0, minutes: 0, seconds: 0 },
+      indefiniteOn: false
+    }
+  }
+})
+
+onValue(dbRef(getDatabase(app), `/Controllers/${props.id}/componentButtonList/`), (snapshot) => {
+  const componentStatus = snapshot.val()
+
+  try{
+
+    events.databaseResult = componentStatus
+    
+    events.componentStatus.chargerStatus.reference =componentStatus.chargerStatus.reference
+  events.componentStatus.fanStatus.reference = componentStatus.fanStatus.reference
+  events.componentStatus.lightStatus.reference = componentStatus.lightStatus.reference
+  events.componentStatus.outletStatus.reference = componentStatus.outletStatus.reference
+
+  events.componentStatus.chargerStatus.indefiniteOn = componentStatus.chargerStatus.indefiniteOn
+  events.componentStatus.fanStatus.indefiniteOn = componentStatus.fanStatus.indefiniteOn
+  events.componentStatus.lightStatus.indefiniteOn = componentStatus.lightStatus.indefiniteOn
+  events.componentStatus.outletStatus.indefiniteOn = componentStatus.outletStatus.indefiniteOn
+}catch(err){
+  console.log()
+}
+
+})
+
+function showController() {
+  events.showController = !events.showController
+}
+/**
+ *
+ * @param {Object} input
+ */
+function setComponentStatus(input) {
+  // prettier-ignore
+  if (input.selected === 'all') {
+    const date = getFutureTime(input.hrs, input.mins, input.secs);
+
+    events.componentStatus.lightStatus.reference   = date
+    events.componentStatus.fanStatus.reference     = date
+    events.componentStatus.chargerStatus.reference = date
+    events.componentStatus.outletStatus.reference  = date
+    
+    events.componentStatus.lightStatus.indefiniteOn   = false
+    events.componentStatus.fanStatus.indefiniteOn     = false
+    events.componentStatus.chargerStatus.indefiniteOn = false
+    events.componentStatus.outletStatus.indefiniteOn  = false
+
+    const temp = {
+      fanStatus: {
+        name: "fanStatus",
+        reference: date,
+        indefiniteOn: false
+      },
+      lightStatus: {
+        name: "lightStatus",
+        reference: date,
+        indefiniteOn: false
+      },
+      outletStatus: {
+        name: "outletStatus",
+        reference: date,
+        indefiniteOn: false
+      },
+      chargerStatus: {
+        name: "chargerStatus",
+        reference: date,
+        indefiniteOn: false
+      }
+    }
+    
+    apiPOST(temp,`/Controllers/ESP_${1}/componentButtonList`)
+  } else {
+    const date = getFutureTime(input.hrs, input.mins, input.secs)
+
+    events.componentStatus[input.selected].name = input.selected 
+    events.componentStatus[input.selected].reference = date
+    events.componentStatus[input.selected].indefiniteOn = false
+
+    const temp = {}
+    temp["name"] = input.selected
+    temp["reference"] = date
+    temp["indefiniteOn"] = false
+
+    apiPOST(temp,`/Controllers/ESP_${1}/componentButtonList/${input.selected}`)
+
+  }
+  // prettier-ignore-end
+}
+
+function toggleComponentStatus(component) {
+  const date = new Date()
+  date.setHours(0)
+  date.setMinutes(0)
+  date.setSeconds(0)
+
+  events.componentStatus[component].reference = { date: '', time: '' }
+  events.componentStatus[component].difference = { hours: 0, minutes: 0, seconds: 0 }
+  events.componentStatus[component].indefiniteOn = !events.componentStatus[component].indefiniteOn
+
+  const temp = {}
+  temp['name'] = component
+  temp['reference'] = {
+    date: date.toISOString().split('T')[0],
+    time: `${date.getHours().toString().padStart(2, '0')}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
+  }
+  temp['indefiniteOn'] = events.componentStatus[component].indefiniteOn
+
+  apiPOST(temp, `/Controllers/ESP_${1}/componentButtonList/${component}`)
+}
+
+setInterval(() => {
+  events.componentStatus.fanStatus.difference = getTimeDifference(
+    events.componentStatus.fanStatus.reference.date,
+    events.componentStatus.fanStatus.reference.time
+  )
+  events.componentStatus.lightStatus.difference = getTimeDifference(
+    events.componentStatus.lightStatus.reference.date,
+    events.componentStatus.lightStatus.reference.time
+  )
+  events.componentStatus.outletStatus.difference = getTimeDifference(
+    events.componentStatus.outletStatus.reference.date,
+    events.componentStatus.outletStatus.reference.time
+  )
+  events.componentStatus.chargerStatus.difference = getTimeDifference(
+    events.componentStatus.chargerStatus.reference.date,
+    events.componentStatus.chargerStatus.reference.time
+  )
+}, 1000)
+</script>
+<style scoped>
+p {
+  margin: 0;
+}
+.rc-parent {
+  min-width: 15rem;
+  max-width: 38rem;
+
+  min-height: 23rem;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+
+  box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.5);
+  border-radius: 0.8rem;
+  overflow: hidden;
+
+  transition: 0.2s all ease;
+}
+.rc-container {
+  width: 15rem;
+  height: 23rem;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: space-around;
+  align-items: center;
+  text-align: center;
+
+  color: black;
+  text-decoration: none;
+
+  padding: 1rem;
+  transition: 0.2s ease;
+}
+
+.rc-container:hover {
+  background-color: #003185;
+  color: white;
+}
+.rc-container:hover .rc-room-notification p {
+  color: white;
+}
+.rc-room-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.rc-room-active {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+
+  justify-content: space-around;
+  gap: 1rem;
+  font-size: 2rem;
+  padding: 1rem;
+}
+
+.rc-room-active p {
+  font-size: 0.7rem;
+}
+.rc-set-container {
+  min-width: 16rem;
+  /* width: 20rem; */
+  padding: 2rem;
+}
+.rc-set-form {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  justify-content: space-between;
+  gap: 1rem;
+}
+.rc-set-form,
+.rc-set-form div {
+  display: flex;
+  flex-direction: column;
+
+  font-size: 0.8rem;
+}
+
+.rc-set-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+#rc-set-components {
+  padding: 0.2rem;
+  font-size: 0.8rem;
+}
+.rc-set-label {
+  margin: 0;
+}
+
+.rc-set-button {
+  font-weight: 900;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  border: 1px solid black;
+  border-radius: 0.4rem;
+
+  background: white;
+  color: black;
+  padding: 0.2rem;
+
+  transition: 0.2s ease;
+}
+
+.rc-set-button:hover {
+  border: 1px solid transparent;
+  background-color: #003185;
+  color: white;
+}
+.rc-set-manual {
+  width: 12rem;
+  display: flex;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rc-set-manual button {
+  padding: 1rem;
+
+  border-radius: 0.4rem;
+  width: 5rem;
+}
+
+.rc-set-manual button i {
+  font-size: 1.5rem;
+}
+
+.rc-room-notification {
+  font-weight: 900;
+}
+
+.rc-room-connected {
+  color: green;
+}
+.rc-room-disconnected {
+  color: red;
+}
+</style>
