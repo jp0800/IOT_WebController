@@ -2,7 +2,7 @@
   <div class="rn-parent">
     <div class="rn-logo-container">
       <div class="rn-logo">
-        <h1>Home Automation</h1>
+        <h1>INTELLIGENT ANDROID-BASED CLASSROOM POWER CONSUMPTION USING IOT</h1>
         <p>automation in one app</p>
       </div>
       <div class="rn-user-container">

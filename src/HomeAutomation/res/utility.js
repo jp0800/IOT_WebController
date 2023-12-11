@@ -14,21 +14,32 @@ function isInputValueEmpty(text) {
  * @return {Object}
  */
 function getFutureTime(hoursToAdd, minutesToAdd, secondsToAdd) {
-  const now = new Date()
+  const now = new Date();
 
+  // Calculate the future time by adding the specified offsets
   const futureTime =
-    now.getTime() + hoursToAdd * 60 * 60 * 1000 + minutesToAdd * 60 * 1000 + secondsToAdd * 1000
+    now.getTime() +
+    hoursToAdd * 60 * 60 * 1000 +
+    minutesToAdd * 60 * 1000 +
+    secondsToAdd * 1000;
 
-  const futureDate = new Date(futureTime)
+  // Create a new Date object with the calculated future time
+  const futureDate = new Date(futureTime);
+
+  // Handle midnight (12 AM) by checking if the current hour is 0
+  const hours = futureDate.getUTCHours() === 0 ? 12 : futureDate.getUTCHours();
+
+  // Format the result as an object with date and time properties
   const futureObject = {
     date: futureDate.toISOString().split('T')[0],
-    time: `${futureDate.getHours().toString().padStart(2, '0')}:${futureDate
-      .getMinutes()
+    time: `${hours.toString().padStart(2, '0')}:${futureDate
+      .getUTCMinutes()
       .toString()
-      .padStart(2, '0')}:${futureDate.getSeconds().toString().padStart(2, '0')}`
-  }
+      .padStart(2, '0')}:${futureDate.getUTCSeconds().toString().padStart(2, '0')}`
+  };
 
-  return futureObject
+  // Return the future time object
+  return futureObject;
 }
 
 /**
@@ -68,47 +79,36 @@ function timeObjectToString(timeObject) {
  * @returns
  */
 function getTimeDifference(futureDate, futureTime) {
-  const now = new Date()
+  const now = new Date();
 
-  const [futureYear, futureMonth, futureDay] = futureDate.split('-').map(Number)
-  const [futureHour, futureMinute, futureSecond] = futureTime.split(':').map(Number)
+  const [futureYear, futureMonth, futureDay] = futureDate.split('-').map(Number);
+  const [futureHour, futureMinute, futureSecond] = futureTime.split(':').map(Number);
 
+  // Create a new Date object using UTC to avoid timezone discrepancies
   const futureTimestamp = new Date(
-    futureYear,
-    futureMonth - 1,
-    futureDay,
-    futureHour,
-    futureMinute,
-    futureSecond
-  ).getTime()
+    Date.UTC(futureYear, futureMonth - 1, futureDay, futureHour, futureMinute, futureSecond)
+  ).getTime();
 
+  // Check if the future time is in the past
   if (futureTimestamp <= now.getTime()) {
     return {
       hours: 0,
       minutes: 0,
       seconds: 0
-    }
+    };
   }
 
-  if (futureTimestamp - now.getTime() < 0) {
-    return {
-      hours: 0,
-      minutes: 0,
-      seconds: 0
-    }
-  }
+  const timeDifference = futureTimestamp - now.getTime();
 
-  const timeDifference = futureTimestamp - now.getTime()
-
-  const remainingHours = Math.floor(timeDifference / (60 * 60 * 1000))
-  const remainingMinutes = Math.floor((timeDifference % (60 * 60 * 1000)) / (60 * 1000))
-  const remainingSeconds = Math.floor((timeDifference % (60 * 1000)) / 1000)
+  const remainingHours = Math.floor(timeDifference / (60 * 60 * 1000));
+  const remainingMinutes = Math.floor((timeDifference % (60 * 60 * 1000)) / (60 * 1000));
+  const remainingSeconds = Math.floor((timeDifference % (60 * 1000)) / 1000);
 
   return {
     hours: remainingHours,
     minutes: remainingMinutes,
     seconds: remainingSeconds
-  }
+  };
 }
 
 function stringToDate(dateString) {

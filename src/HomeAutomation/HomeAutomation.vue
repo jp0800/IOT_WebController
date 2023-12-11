@@ -3,7 +3,7 @@
     <div class="ha-container">
       <div class="ha-header">
         <i class="bi bi-diagram-3"></i>
-        <h1>Home Automation</h1>
+        <h1>INTELLIGENT ANDROID-BASED CLASSROOM POWER CONSUMPTION USING IOT</h1>
         <p>Automation in one app</p>
       </div>
       <form class="ha-form" @submit.prevent="loginUser(userCredentials)">
@@ -116,6 +116,7 @@ function loginUser(userCredentials) {
 .ha-header h1 {
   font-size: 1.5rem;
   margin: 0;
+  word-break: break-all;
 }
 .ha-header p {
   font-size: 0.7rem;

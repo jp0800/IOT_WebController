@@ -199,15 +199,17 @@ function checkActive(component) {
   let hrs = 0
   let min = 0
   let sec = 0
+  let man = false
   try {
     hrs = events.componentStatus[component].difference.hours > 0
     min = events.componentStatus[component].difference.minutes > 0
     sec = events.componentStatus[component].difference.seconds > 0
+    man = events.componentStatus[component].indefiniteOn
   } catch (err) {
     /* empty */
   }
 
-  return hrs || min || sec
+  return hrs || min || sec || man
 }
 
 function setComponentStatus(input) {
@@ -265,6 +267,8 @@ function setComponentStatus(input) {
 
   }
   // prettier-ignore-end
+
+  events.input = {hrs: 0, mins: 0, secs: 0}
 }
 
 function toggleComponentStatus(component) {
