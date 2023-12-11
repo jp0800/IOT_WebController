@@ -5,35 +5,37 @@
         <h1>{{ props.title }}</h1>
       </div>
       <div class="rc-room-active">
-        <div>
+        <div :class="checkActive('fanStatus') ? 'green' : ''">
           <i class="bi bi-fan"></i>
-          <p v-if="events.input.selected !== 'manual'">{{ differenceToString(events.componentStatus.fanStatus.difference) }}</p>
-          <p v-else>{{ events.componentStatus.fanStatus.indefiniteOn ? "On" : "Off" }}</p>
+          <p v-if="events.input.selected !== 'manual'">
+            {{ differenceToString(events.componentStatus.fanStatus.difference) }}
+          </p>
+          <p v-else>{{ events.componentStatus.fanStatus.indefiniteOn ? 'On' : 'Off' }}</p>
         </div>
-        <div>
+        <div :class="checkActive('lightStatus') ? 'green' : ''">
           <i class="bi bi-lightbulb-fill"></i>
           <p v-if="events.input.selected !== 'manual'">
             {{ differenceToString(events.componentStatus.lightStatus.difference) }}
           </p>
-          <p v-else>{{ events.componentStatus.lightStatus.indefiniteOn ? "On" : "Off" }}</p>
+          <p v-else>{{ events.componentStatus.lightStatus.indefiniteOn ? 'On' : 'Off' }}</p>
         </div>
-        <div>
-          <i class="bi bi-lightning-charge-fill"></i>
+        <div :class="checkActive('chargerStatus') ? 'green' : ''">
+          <i class="bi bi-lightbulb-fill"></i>
           <p v-if="events.input.selected !== 'manual'">
             {{ differenceToString(events.componentStatus.chargerStatus.difference) }}
           </p>
-          <p v-else>{{ events.componentStatus.chargerStatus.indefiniteOn ? "On" : "Off" }}</p>
+          <p v-else>{{ events.componentStatus.chargerStatus.indefiniteOn ? 'On' : 'Off' }}</p>
         </div>
-        <div>
+        <div :class="checkActive('outletStatus') ? 'green' : ''">
           <i class="bi bi-plug-fill"></i>
           <p v-if="events.input.selected !== 'manual'">
             {{ differenceToString(events.componentStatus.outletStatus.difference) }}
           </p>
-          <p v-else>{{ events.componentStatus.outletStatus.indefiniteOn ? "On" : "Off" }}</p>
+          <p v-else>{{ events.componentStatus.outletStatus.indefiniteOn ? 'On' : 'Off' }}</p>
         </div>
       </div>
-      <div class="rc-room-notification">
-        <p class="rc-room-disconnected"></p>
+      <div class="rc-room-notification" v-if="!props.isAvailable">
+        <p class="rc-room-disconnected">Room is unavailable</p>
       </div>
     </a>
     <div v-if="events.showController" class="rc-set-container">
@@ -49,10 +51,10 @@
             required
           >
             <option value="manual">Manual</option>
-            <option value="lightStatus">Light</option>
             <option value="fanStatus">Fan</option>
+            <option value="lightStatus">Light 1</option>
+            <option value="chargerStatus">Light 2</option>
             <option value="outletStatus">Outlet</option>
-            <option value="chargerStatus">Charger</option>
             <option value="all">All</option>
           </select>
         </div>
@@ -93,10 +95,10 @@
             <i class="bi bi-fan"></i><br />Fan
           </button>
           <button @click.prevent="toggleComponentStatus('lightStatus')">
-            <i class="bi bi-lightbulb-fill"></i><br />Light
+            <i class="bi bi-lightbulb-fill"></i><br />Light 1
           </button>
           <button @click.prevent="toggleComponentStatus('chargerStatus')">
-            <i class="bi bi-lightning-charge-fill"></i><br />Charger
+            <i class="bi bi-lightbulb-fill"></i><br />Light 2
           </button>
           <button @click.prevent="toggleComponentStatus('outletStatus')">
             <i class="bi bi-plug-fill"></i><br />Outlet
@@ -104,6 +106,9 @@
         </div>
 
         <button v-if="events.input.selected !== 'manual'" class="rc-set-button">Set</button>
+        <button @click.prevent="shutdownComponents()" class="rc-set-button rc-shutdown">
+          Shutdown All
+        </button>
       </form>
     </div>
   </div>
@@ -122,6 +127,10 @@ const props = defineProps({
   },
   id: {
     type: String,
+    required: true
+  },
+  isAvailable: {
+    type: Boolean,
     required: true
   }
 })
@@ -165,32 +174,42 @@ const events = reactive({
 onValue(dbRef(getDatabase(app), `/Controllers/${props.id}/componentButtonList/`), (snapshot) => {
   const componentStatus = snapshot.val()
 
-  try{
-
+  try {
     events.databaseResult = componentStatus
-    
-    events.componentStatus.chargerStatus.reference =componentStatus.chargerStatus.reference
-  events.componentStatus.fanStatus.reference = componentStatus.fanStatus.reference
-  events.componentStatus.lightStatus.reference = componentStatus.lightStatus.reference
-  events.componentStatus.outletStatus.reference = componentStatus.outletStatus.reference
 
-  events.componentStatus.chargerStatus.indefiniteOn = componentStatus.chargerStatus.indefiniteOn
-  events.componentStatus.fanStatus.indefiniteOn = componentStatus.fanStatus.indefiniteOn
-  events.componentStatus.lightStatus.indefiniteOn = componentStatus.lightStatus.indefiniteOn
-  events.componentStatus.outletStatus.indefiniteOn = componentStatus.outletStatus.indefiniteOn
-}catch(err){
-  console.log()
-}
+    events.componentStatus.chargerStatus.reference = componentStatus.chargerStatus.reference
+    events.componentStatus.fanStatus.reference = componentStatus.fanStatus.reference
+    events.componentStatus.lightStatus.reference = componentStatus.lightStatus.reference
+    events.componentStatus.outletStatus.reference = componentStatus.outletStatus.reference
 
+    events.componentStatus.chargerStatus.indefiniteOn = componentStatus.chargerStatus.indefiniteOn
+    events.componentStatus.fanStatus.indefiniteOn = componentStatus.fanStatus.indefiniteOn
+    events.componentStatus.lightStatus.indefiniteOn = componentStatus.lightStatus.indefiniteOn
+    events.componentStatus.outletStatus.indefiniteOn = componentStatus.outletStatus.indefiniteOn
+  } catch (err) {
+    /* empty */
+  }
 })
 
 function showController() {
-  events.showController = !events.showController
+  if (props.isAvailable) events.showController = !events.showController
 }
-/**
- *
- * @param {Object} input
- */
+
+function checkActive(component) {
+  let hrs = 0
+  let min = 0
+  let sec = 0
+  try {
+    hrs = events.componentStatus[component].difference.hours > 0
+    min = events.componentStatus[component].difference.minutes > 0
+    sec = events.componentStatus[component].difference.seconds > 0
+  } catch (err) {
+    /* empty */
+  }
+
+  return hrs || min || sec
+}
+
 function setComponentStatus(input) {
   // prettier-ignore
   if (input.selected === 'all') {
@@ -229,7 +248,7 @@ function setComponentStatus(input) {
       }
     }
     
-    apiPOST(temp,`/Controllers/ESP_${1}/componentButtonList`)
+    apiPOST(temp,`/Controllers/${props.id}/componentButtonList`)
   } else {
     const date = getFutureTime(input.hrs, input.mins, input.secs)
 
@@ -242,7 +261,7 @@ function setComponentStatus(input) {
     temp["reference"] = date
     temp["indefiniteOn"] = false
 
-    apiPOST(temp,`/Controllers/ESP_${1}/componentButtonList/${input.selected}`)
+    apiPOST(temp,`/Controllers/${props.id}/componentButtonList/${input.selected}`)
 
   }
   // prettier-ignore-end
@@ -269,7 +288,35 @@ function toggleComponentStatus(component) {
   }
   temp['indefiniteOn'] = events.componentStatus[component].indefiniteOn
 
-  apiPOST(temp, `/Controllers/ESP_${1}/componentButtonList/${component}`)
+  apiPOST(temp, `/Controllers/${props.id}/componentButtonList/${component}`)
+}
+
+function shutdownComponents() {
+  const components = ['fanStatus', 'lightStatus', 'chargerStatus', 'outletStatus']
+
+  const date = new Date()
+  date.setHours(0)
+  date.setMinutes(0)
+  date.setSeconds(0)
+  const temp = {}
+  temp['reference'] = {
+    date: date.toISOString().split('T')[0],
+    time: `${date.getHours().toString().padStart(2, '0')}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
+  }
+  temp['indefiniteOn'] = false
+
+  for (let i = 0; i < components.length; i++) {
+    events.componentStatus[components[i]].reference = { date: '', time: '' }
+    events.componentStatus[components[i]].difference = { hours: 0, minutes: 0, seconds: 0 }
+    events.componentStatus[components[i]].indefiniteOn = false
+
+    temp['name'] = components[i]
+
+    apiPOST(temp, `/Controllers/${props.id}/componentButtonList/${components[i]}`)
+  }
 }
 
 setInterval(() => {
@@ -292,6 +339,9 @@ setInterval(() => {
 }, 1000)
 </script>
 <style scoped>
+.green {
+  color: rgb(0, 189, 126);
+}
 p {
   margin: 0;
 }
@@ -354,6 +404,7 @@ p {
 
 .rc-room-active p {
   font-size: 0.7rem;
+  font-weight: 900;
 }
 .rc-set-container {
   min-width: 16rem;
@@ -406,6 +457,16 @@ p {
 .rc-set-button:hover {
   border: 1px solid transparent;
   background-color: #003185;
+  color: white;
+}
+
+.rc-shutdown {
+  text-decoration: none;
+  text-align: center;
+}
+.rc-shutdown:hover {
+  border: 1px solid transparent;
+  background-color: red;
   color: white;
 }
 .rc-set-manual {

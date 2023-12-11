@@ -7,10 +7,10 @@
       <h1>Room List</h1>
     </div>
     <div class="dp-room-list">
-      <RoomController title="Room 1" id="ESP_1"></RoomController>
-      <!-- <RoomController title="Room 2" id="ESP_2"></RoomController>
-      <RoomController title="Room 3" id="ESP_3"></RoomController>
-      <RoomController title="Room 4" id="ESP_4"></RoomController> -->
+      <RoomController title="Room 1" id="ESP_1" :is-available="true"></RoomController>
+      <RoomController title="Room 2" id="ESP_2" :is-available="false"></RoomController>
+      <RoomController title="Room 3" id="ESP_3" :is-available="false"></RoomController>
+      <RoomController title="Room 4" id="ESP_4" :is-available="false"></RoomController>
     </div>
   </div>
 </template>
