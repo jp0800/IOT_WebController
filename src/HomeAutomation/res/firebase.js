@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { ref, getDatabase, onValue, set, update } from 'firebase/database'
+import { ref, getDatabase, set } from 'firebase/database'
 
 /* INITIALIZE DATABASE */
 const firebaseConfig = {
