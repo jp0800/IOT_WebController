@@ -23,7 +23,6 @@
           autocomplete="false"
           required
         />
-
         <button>Login</button>
       </form>
     </div>
@@ -64,22 +63,11 @@ function loginUser(userCredentials) {
 
         router.push('/Home')
       })
-      .catch((error) => {
-        const errorCode = error.code
-        const errorMessage = error.message
-
-        alert(`${errorCode} : \n${errorMessage}`)
+      .catch(() => {
+        alert(`Error: User is not Registered`)
       })
   }
 }
-/**
- * TODO
- * Gawin yung set components time to database
- * implementation will be time long and should be static.
- *
- * the implementation of the mcu will get the current internet time and tick from there
- *
- */
 </script>
 
 <style scoped>
@@ -94,9 +82,11 @@ function loginUser(userCredentials) {
   align-items: center;
 
   color: white;
+  padding:2rem
 }
 
 .ha-container {
+  max-width: 20rem;
   display: flex;
   flex-direction: column;
 
@@ -114,9 +104,9 @@ function loginUser(userCredentials) {
 }
 
 .ha-header h1 {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   margin: 0;
-  word-break: break-all;
+  word-wrap: break-word;
 }
 .ha-header p {
   font-size: 0.7rem;

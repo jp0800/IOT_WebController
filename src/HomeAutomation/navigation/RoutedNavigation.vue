@@ -8,7 +8,7 @@
       <div class="rn-user-container">
         <a href="" class="rn-user">
           <img src="../../assets/logo.svg" />
-          <p>{{ events.emailAddress }}</p>
+          <p>esp8266.ClassroomAutomation</p>
         </a>
         <a href="" class="rn-user-logout" @click.prevent="logout"
           ><i class="bi bi-box-arrow-right"></i
@@ -20,12 +20,6 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { reactive } from 'vue'
-
-const events = reactive({
-  emailAddress: localStorage.getItem('emailAddress').split('@')[0]
-})
-
 const router = useRouter()
 
 function logout() {
@@ -65,8 +59,6 @@ function logout() {
   margin: 0;
 }
 .rn-user-container {
-  min-width: 17rem;
-
   display: flex;
   flex-direction: row;
   gap: 1rem;

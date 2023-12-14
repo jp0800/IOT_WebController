@@ -146,25 +146,25 @@ const events = reactive({
   componentStatus: {
     fanStatus: {
       name: 'fanStatus',
-      reference: { date: '', time: '' },
+      reference: { date: '', time: '', active: true },
       difference: { hours: 0, minutes: 0, seconds: 0 },
       indefiniteOn: false
     },
     lightStatus: {
       name: 'lightStatus',
-      reference: { date: '', time: '' },
+      reference: { date: '', time: '', active: true },
       difference: { hours: 0, minutes: 0, seconds: 0 },
       indefiniteOn: false
     },
     outletStatus: {
       name: 'outletStatus',
-      reference: { date: '', time: '' },
+      reference: { date: '', time: '', active: true },
       difference: { hours: 0, minutes: 0, seconds: 0 },
       indefiniteOn: false
     },
     chargerStatus: {
       name: 'chargerStatus',
-      reference: { date: '', time: '' },
+      reference: { date: '', time: '', active: true },
       difference: { hours: 0, minutes: 0, seconds: 0 },
       indefiniteOn: false
     }
@@ -221,7 +221,7 @@ function setComponentStatus(input) {
     events.componentStatus.fanStatus.reference     = date
     events.componentStatus.chargerStatus.reference = date
     events.componentStatus.outletStatus.reference  = date
-    
+
     events.componentStatus.lightStatus.indefiniteOn   = false
     events.componentStatus.fanStatus.indefiniteOn     = false
     events.componentStatus.chargerStatus.indefiniteOn = false
@@ -249,12 +249,12 @@ function setComponentStatus(input) {
         indefiniteOn: false
       }
     }
-    
+
     apiPOST(temp,`/Controllers/${props.id}/componentButtonList`)
   } else {
     const date = getFutureTime(input.hrs, input.mins, input.secs)
 
-    events.componentStatus[input.selected].name = input.selected 
+    events.componentStatus[input.selected].name = input.selected
     events.componentStatus[input.selected].reference = date
     events.componentStatus[input.selected].indefiniteOn = false
 
@@ -268,7 +268,7 @@ function setComponentStatus(input) {
   }
   // prettier-ignore-end
 
-  events.input = {hrs: 0, mins: 0, secs: 0}
+  events.input = { hrs: 0, mins: 0, secs: 0 }
 }
 
 function toggleComponentStatus(component) {
@@ -280,6 +280,7 @@ function toggleComponentStatus(component) {
   events.componentStatus[component].reference = { date: '', time: '' }
   events.componentStatus[component].difference = { hours: 0, minutes: 0, seconds: 0 }
   events.componentStatus[component].indefiniteOn = !events.componentStatus[component].indefiniteOn
+  events.componentStatus[component].active = !events.componentStatus[component].active
 
   const temp = {}
   temp['name'] = component
@@ -288,7 +289,8 @@ function toggleComponentStatus(component) {
     time: `${date.getHours().toString().padStart(2, '0')}:${date
       .getMinutes()
       .toString()
-      .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
+      .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`,
+    active: events.componentStatus[component].active
   }
   temp['indefiniteOn'] = events.componentStatus[component].indefiniteOn
 
@@ -308,7 +310,8 @@ function shutdownComponents() {
     time: `${date.getHours().toString().padStart(2, '0')}:${date
       .getMinutes()
       .toString()
-      .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
+      .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`,
+    active: false
   }
   temp['indefiniteOn'] = false
 
@@ -316,6 +319,9 @@ function shutdownComponents() {
     events.componentStatus[components[i]].reference = { date: '', time: '' }
     events.componentStatus[components[i]].difference = { hours: 0, minutes: 0, seconds: 0 }
     events.componentStatus[components[i]].indefiniteOn = false
+    events.componentStatus[components[i]].active = false
+
+
 
     temp['name'] = components[i]
 
@@ -326,19 +332,23 @@ function shutdownComponents() {
 setInterval(() => {
   events.componentStatus.fanStatus.difference = getTimeDifference(
     events.componentStatus.fanStatus.reference.date,
-    events.componentStatus.fanStatus.reference.time
+    events.componentStatus.fanStatus.reference.time,
+    { name: 'fanStatus', id: props.id }
   )
   events.componentStatus.lightStatus.difference = getTimeDifference(
     events.componentStatus.lightStatus.reference.date,
-    events.componentStatus.lightStatus.reference.time
+    events.componentStatus.lightStatus.reference.time,
+    { name: 'lightStatus', id: props.id }
   )
   events.componentStatus.outletStatus.difference = getTimeDifference(
     events.componentStatus.outletStatus.reference.date,
-    events.componentStatus.outletStatus.reference.time
+    events.componentStatus.outletStatus.reference.time,
+    { name: 'outletStatus', id: props.id }
   )
   events.componentStatus.chargerStatus.difference = getTimeDifference(
     events.componentStatus.chargerStatus.reference.date,
-    events.componentStatus.chargerStatus.reference.time
+    events.componentStatus.chargerStatus.reference.time,
+    { name: 'chargerStatus', id: props.id }
   )
 }, 1000)
 </script>
@@ -351,7 +361,7 @@ p {
 }
 .rc-parent {
   min-width: 15rem;
-  max-width: 38rem;
+  /* max-width: 38rem; */
 
   min-height: 23rem;
   display: flex;
@@ -361,6 +371,9 @@ p {
   box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.5);
   border-radius: 0.8rem;
   overflow: hidden;
+
+  justify-content: center;
+  align-items: center;
 
   transition: 0.2s all ease;
 }
