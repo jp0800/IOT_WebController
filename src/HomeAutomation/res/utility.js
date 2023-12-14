@@ -1,4 +1,3 @@
-import { apiPOST } from "./firebase"
 /**
  *
  * @param {String} text string to be tested
@@ -40,6 +39,25 @@ function getFutureTime(hoursToAdd, minutesToAdd, secondsToAdd) {
   return futureObject
 }
 
+function getFutureTime2(hoursToAdd, minutesToAdd, secondsToAdd) {
+  const now = new Date()
+
+  const futureTime =
+    now.getTime() + hoursToAdd * 60 * 60 * 1000 + minutesToAdd * 60 * 1000 + secondsToAdd * 1000
+
+  const futureDate = new Date(futureTime)
+  const futureObject = {
+    date: futureDate.toISOString().split('T')[0],
+    time: `${futureDate.getHours().toString().padStart(2, '0')}:${futureDate
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}:${futureDate.getSeconds().toString().padStart(2, '0')}`
+  }
+
+  return futureObject
+}
+
+
 /**
  *
  * @param {Object} diff
@@ -75,13 +93,10 @@ function timeObjectToString(timeObject) {
   return `${futureHours}:${futureMinutes}:${futureSeconds}`
 }
 
-/**
- *
- * @param {String} futureDate
- * @param {String} futureTime
- * @returns
- */
-function getTimeDifference(futureDate, futureTime, info) {
+
+
+
+function getTimeDifference(futureDate, futureTime) {
   try {
     const now = new Date()
 
@@ -108,8 +123,6 @@ function getTimeDifference(futureDate, futureTime, info) {
     const remainingHours = Math.floor(timeDifference / (60 * 60 * 1000))
     const remainingMinutes = Math.floor((timeDifference % (60 * 60 * 1000)) / (60 * 1000))
     const remainingSeconds = Math.floor((timeDifference % (60 * 1000)) / 1000)
-    
-    apiPOST(true, `/Controllers/${info.id}/componentButtonList/${info.name}/reference/active/`)
 
     return {
       hours: remainingHours,
@@ -117,7 +130,6 @@ function getTimeDifference(futureDate, futureTime, info) {
       seconds: remainingSeconds
     }
   } catch (err) {
-    apiPOST(false, `/Controllers/${info.id}/componentButtonList/${info.name}/reference/active/`)
     return {
       hours: 0,
       minutes: 0,
@@ -153,5 +165,6 @@ export {
   getTimeDifference,
   differenceToString,
   stringToDate,
-  timeObjectToString
+  timeObjectToString,
+  getFutureTime2
 }

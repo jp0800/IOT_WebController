@@ -115,7 +115,7 @@
 </template>
 <script setup>
 import { reactive } from 'vue'
-import { getFutureTime, getTimeDifference, differenceToString } from '../res/utility'
+import { getFutureTime, getFutureTime2, getTimeDifference, differenceToString } from '../res/utility'
 import { app, apiPOST } from '../res/firebase'
 
 import { getDatabase, onValue, ref as dbRef } from 'firebase/database'
@@ -146,25 +146,25 @@ const events = reactive({
   componentStatus: {
     fanStatus: {
       name: 'fanStatus',
-      reference: { date: '', time: '', active: true },
+      reference: { date: '', time: '' },
       difference: { hours: 0, minutes: 0, seconds: 0 },
       indefiniteOn: false
     },
     lightStatus: {
       name: 'lightStatus',
-      reference: { date: '', time: '', active: true },
+      reference: { date: '', time: '' },
       difference: { hours: 0, minutes: 0, seconds: 0 },
       indefiniteOn: false
     },
     outletStatus: {
       name: 'outletStatus',
-      reference: { date: '', time: '', active: true },
+      reference: { date: '', time: ''},
       difference: { hours: 0, minutes: 0, seconds: 0 },
       indefiniteOn: false
     },
     chargerStatus: {
       name: 'chargerStatus',
-      reference: { date: '', time: '', active: true },
+      reference: { date: '', time: ''},
       difference: { hours: 0, minutes: 0, seconds: 0 },
       indefiniteOn: false
     }
@@ -216,6 +216,7 @@ function setComponentStatus(input) {
   // prettier-ignore
   if (input.selected === 'all') {
     const date = getFutureTime(input.hrs, input.mins, input.secs);
+    const date2 = getFutureTime2(input.hrs, input.mins, input.secs);
 
     events.componentStatus.lightStatus.reference   = date
     events.componentStatus.fanStatus.reference     = date
@@ -231,21 +232,25 @@ function setComponentStatus(input) {
       fanStatus: {
         name: "fanStatus",
         reference: date,
+        reference2: date2,
         indefiniteOn: false
       },
       lightStatus: {
         name: "lightStatus",
         reference: date,
+        reference2: date2,
         indefiniteOn: false
       },
       outletStatus: {
         name: "outletStatus",
         reference: date,
+        reference2: date2,
         indefiniteOn: false
       },
       chargerStatus: {
         name: "chargerStatus",
         reference: date,
+        reference2: date2,
         indefiniteOn: false
       }
     }
@@ -253,6 +258,7 @@ function setComponentStatus(input) {
     apiPOST(temp,`/Controllers/${props.id}/componentButtonList`)
   } else {
     const date = getFutureTime(input.hrs, input.mins, input.secs)
+    const date2 = getFutureTime2(input.hrs, input.mins, input.secs);
 
     events.componentStatus[input.selected].name = input.selected
     events.componentStatus[input.selected].reference = date
@@ -261,6 +267,7 @@ function setComponentStatus(input) {
     const temp = {}
     temp["name"] = input.selected
     temp["reference"] = date
+    temp["reference2"] = date2
     temp["indefiniteOn"] = false
 
     apiPOST(temp,`/Controllers/${props.id}/componentButtonList/${input.selected}`)
@@ -290,7 +297,13 @@ function toggleComponentStatus(component) {
       .getMinutes()
       .toString()
       .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`,
-    active: events.componentStatus[component].active
+  }
+  temp['reference2'] = {
+    date: date.toISOString().split('T')[0],
+    time: `${date.getHours().toString().padStart(2, '0')}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`,
   }
   temp['indefiniteOn'] = events.componentStatus[component].indefiniteOn
 
@@ -311,12 +324,19 @@ function shutdownComponents() {
       .getMinutes()
       .toString()
       .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`,
-    active: false
+  }
+  temp['reference2'] = {
+    date: date.toISOString().split('T')[0],
+    time: `${date.getHours().toString().padStart(2, '0')}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`,
   }
   temp['indefiniteOn'] = false
 
   for (let i = 0; i < components.length; i++) {
     events.componentStatus[components[i]].reference = { date: '', time: '' }
+    events.componentStatus[components[i]].reference2 = { date: '', time: '' }
     events.componentStatus[components[i]].difference = { hours: 0, minutes: 0, seconds: 0 }
     events.componentStatus[components[i]].indefiniteOn = false
     events.componentStatus[components[i]].active = false
@@ -333,22 +353,18 @@ setInterval(() => {
   events.componentStatus.fanStatus.difference = getTimeDifference(
     events.componentStatus.fanStatus.reference.date,
     events.componentStatus.fanStatus.reference.time,
-    { name: 'fanStatus', id: props.id }
   )
   events.componentStatus.lightStatus.difference = getTimeDifference(
     events.componentStatus.lightStatus.reference.date,
     events.componentStatus.lightStatus.reference.time,
-    { name: 'lightStatus', id: props.id }
   )
   events.componentStatus.outletStatus.difference = getTimeDifference(
     events.componentStatus.outletStatus.reference.date,
     events.componentStatus.outletStatus.reference.time,
-    { name: 'outletStatus', id: props.id }
   )
   events.componentStatus.chargerStatus.difference = getTimeDifference(
     events.componentStatus.chargerStatus.reference.date,
     events.componentStatus.chargerStatus.reference.time,
-    { name: 'chargerStatus', id: props.id }
   )
 }, 1000)
 </script>
