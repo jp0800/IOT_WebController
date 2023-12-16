@@ -19,10 +19,14 @@
         <input
           id="ha-password"
           v-model="userCredentials.password"
-          type="password"
+          :type="userCredentials.showPassword ? 'text' : 'password'"
           autocomplete="false"
           required
         />
+        <span class="ha-password-show">
+          <input type="checkbox" id="ha-password-show" v-model="userCredentials.showPassword" />
+          <label for="ha-password-show"> Show password </label>
+        </span>
         <button>Login</button>
       </form>
     </div>
@@ -40,7 +44,8 @@ const router = useRouter()
 
 const userCredentials = reactive({
   emailAddress: '',
-  password: ''
+  password: '',
+  showPassword: false
 })
 
 /**
@@ -82,7 +87,7 @@ function loginUser(userCredentials) {
   align-items: center;
 
   color: white;
-  padding:2rem
+  padding: 2rem;
 }
 
 .ha-container {
@@ -160,5 +165,19 @@ function loginUser(userCredentials) {
 .ha-form button:hover {
   background: rgba(255, 255, 255, 0.2);
   color: white;
+}
+
+.ha-password-show {
+  display: flex;
+  gap: 0.5rem;
+
+  align-items: center;
+}
+.ha-password-show input {
+  margin: 0;
+}
+
+.ha-password-show label {
+  text-transform: capitalize !important;
 }
 </style>

@@ -47,7 +47,7 @@ void getReferenceTime();
 void checkTimeComponents();
 
 noDelay nTimeTicker(1000, timeTicker);
-noDelay nGetCurrentTime(300000, getCurrentTime);
+noDelay nGetCurrentTime(10000, getCurrentTime);
 noDelay nGetReferenceTime(1000, getReferenceTime);
 noDelay nCheckTimeComponents(1000, checkTimeComponents);
 
@@ -70,8 +70,9 @@ TimeStruct extractTime(const String &timeString) {
 }
 
 void setup() {
-
   Serial.begin(115200);
+
+  pinMode(BUILTIN_LED, OUTPUT);
 
 #if defined(ARDUINO_RASPBERRY_PI_PICO_W)
   multi.addAP(WIFI_SSID, WIFI_PASSWORD);
@@ -83,6 +84,11 @@ void setup() {
   Serial.print("Connecting to Wi-Fi");
   unsigned long ms = millis();
   while (WiFi.status() != WL_CONNECTED) {
+    digitalWrite(BUILTIN_LED, HIGH);
+    delay(500);
+    digitalWrite(BUILTIN_LED, LOW);
+    delay(500);
+
     Serial.print(".");
     delay(300);
 #if defined(ARDUINO_RASPBERRY_PI_PICO_W)
@@ -90,6 +96,9 @@ void setup() {
       break;
 #endif
   }
+
+  digitalWrite(BUILTIN_LED, HIGH);
+
   Serial.println();
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
@@ -254,6 +263,11 @@ String lightDate;
 String fanDate;
 String outletDate;
 
+bool chargerIndefiniteOn;
+bool lightIndefiniteOn;
+bool fanIndefiniteOn;
+bool outletIndefiniteOn;
+
 void getReferenceTime() {
   if (!Firebase.ready()) return;
   String jsonData = "";
@@ -271,23 +285,23 @@ void getReferenceTime() {
   }
 
   // Access the values of chargerStatus
-  bool chargerIndefiniteOn = doc["chargerStatus"]["indefiniteOn"];
-  String chargerReferenceDate = doc["chargerStatus"]["reference"]["date"];
-  String chargerReferenceTime = doc["chargerStatus"]["reference"]["time"];
-  
+  chargerIndefiniteOn = doc["chargerStatus"]["indefiniteOn"];
+  String chargerReferenceDate = doc["chargerStatus"]["reference2"]["date"];
+  String chargerReferenceTime = doc["chargerStatus"]["reference2"]["time"];
+
   // Access the values of fanStatus
-  bool fanIndefiniteOn = doc["fanStatus"]["indefiniteOn"];
-  String fanReferenceDate = doc["fanStatus"]["reference"]["date"];
-  String fanReferenceTime = doc["fanStatus"]["reference"]["time"];
+  fanIndefiniteOn = doc["fanStatus"]["indefiniteOn"];
+  String fanReferenceDate = doc["fanStatus"]["reference2"]["date"];
+  String fanReferenceTime = doc["fanStatus"]["reference2"]["time"];
 
   // Access the values of lightStatus
-  bool lightIndefiniteOn = doc["lightStatus"]["indefiniteOn"];
-  String lightReferenceDate = doc["lightStatus"]["reference"]["date"];
-  String lightReferenceTime = doc["lightStatus"]["reference"]["time"];
+  lightIndefiniteOn = doc["lightStatus"]["indefiniteOn"];
+  String lightReferenceDate = doc["lightStatus"]["reference2"]["date"];
+  String lightReferenceTime = doc["lightStatus"]["reference2"]["time"];
   // Access the values of outletStatus
-  bool outletIndefiniteOn = doc["outletStatus"]["indefiniteOn"];
-  String outletReferenceDate = doc["outletStatus"]["reference"]["date"];
-  String outletReferenceTime = doc["outletStatus"]["reference"]["time"];
+  outletIndefiniteOn = doc["outletStatus"]["indefiniteOn"];
+  String outletReferenceDate = doc["outletStatus"]["reference2"]["date"];
+  String outletReferenceTime = doc["outletStatus"]["reference2"]["time"];
 
   chargerTime = extractTime(chargerReferenceTime);
   lightTime = extractTime(lightReferenceTime);
@@ -305,7 +319,53 @@ unsigned long convertToSeconds(int hours, int minutes, int seconds) {
 }
 
 // Function to get the remaining time
-void getDifferenceTime(int relay, int currentHour, int currentMinute, int currentSecond, int futureHour, int futureMinute, int futureSecond) {
+// void getDifferenceTime(int relay, int currentHour, int currentMinute, int currentSecond, int futureHour, int futureMinute, int futureSecond) {
+//   unsigned long currentTime = convertToSeconds(currentHours, currentMinutes, currentSeconds);
+//   unsigned long futureTime = convertToSeconds(futureHour, futureMinute, futureSecond);
+
+//   if (futureTime <= currentTime) {
+//     Serial.println("Future time is in the past.");
+//     digitalWrite(relay, HIGH);
+//     controlBuzzer(relay, false);
+//     return;
+//   }
+
+//   unsigned long remainingTime = futureTime - currentTime;
+
+//   if ((remainingTime >= 4 * 60 + 55 && remainingTime <= 5 * 60) || (remainingTime >= 5 && remainingTime <= 10)) {
+//     controlBuzzer(relay, true);
+//   } else {
+//     controlBuzzer(relay, false);
+//   }
+
+
+//   digitalWrite(relay, LOW);
+
+//   // Convert remaining time to hours, minutes, and seconds
+//   int remainingHours = remainingTime / 3600;
+//   int remainingMinutes = (remainingTime % 3600) / 60;
+//   int remainingSeconds = remainingTime % 60;
+
+//   Serial.print("Remaining Time: ");
+//   Serial.print(remainingHours);
+//   Serial.print(" hours, ");
+//   Serial.print(remainingMinutes);
+//   Serial.print(" minutes, ");
+//   Serial.print(remainingSeconds);
+//   Serial.println(" seconds");
+// }
+
+// Function to get the remaining time
+void getDifferenceTime(int relay, bool indefiniteOn, int currentHour, int currentMinute, int currentSecond, int futureHour, int futureMinute, int futureSecond) {
+  if (indefiniteOn) {
+    Serial.println("Indefinite mode is ON.");
+    digitalWrite(relay, LOW);
+    controlBuzzer(relay, false);
+    return;  // Stop calculations
+  }
+
+  // Continue calculations when indefiniteOn is false
+
   unsigned long currentTime = convertToSeconds(currentHours, currentMinutes, currentSeconds);
   unsigned long futureTime = convertToSeconds(futureHour, futureMinute, futureSecond);
 
@@ -313,37 +373,39 @@ void getDifferenceTime(int relay, int currentHour, int currentMinute, int curren
     Serial.println("Future time is in the past.");
     digitalWrite(relay, HIGH);
     controlBuzzer(relay, false);
-    return;
+    return;  // Stop calculations
   }
 
   unsigned long remainingTime = futureTime - currentTime;
 
-  if (remainingTime < 10) {
+  if ((remainingTime >= 4 * 60 + 55 && remainingTime <= 5 * 60) || (remainingTime >= 5 && remainingTime <= 10)) {
     controlBuzzer(relay, true);
   } else {
     controlBuzzer(relay, false);
   }
 
-  digitalWrite(relay, LOW);
+  if (!indefiniteOn) {
+    // Continue with calculations and control relay pin
+    digitalWrite(relay, LOW);
 
-  // Convert remaining time to hours, minutes, and seconds
-  int remainingHours = remainingTime / 3600;
-  int remainingMinutes = (remainingTime % 3600) / 60;
-  int remainingSeconds = remainingTime % 60;
+    // Convert remaining time to hours, minutes, and seconds
+    int remainingHours = remainingTime / 3600;
+    int remainingMinutes = (remainingTime % 3600) / 60;
+    int remainingSeconds = remainingTime % 60;
 
-  Serial.print("Remaining Time: ");
-  Serial.print(remainingHours);
-  Serial.print(" hours, ");
-  Serial.print(remainingMinutes);
-  Serial.print(" minutes, ");
-  Serial.print(remainingSeconds);
-  Serial.println(" seconds");
+    Serial.print("Remaining Time: ");
+    Serial.print(remainingHours);
+    Serial.print(" hours, ");
+    Serial.print(remainingMinutes);
+    Serial.print(" minutes, ");
+    Serial.print(remainingSeconds);
+    Serial.println(" seconds");
+  }
 }
 
-
 void checkTimeComponents() {
-  getDifferenceTime(RPIN_1, currentHours, currentMinutes, currentSeconds, fanTime.hours, fanTime.minutes, fanTime.seconds);
-  getDifferenceTime(RPIN_2, currentHours, currentMinutes, currentSeconds, lightTime.hours, lightTime.minutes, lightTime.seconds);
-  getDifferenceTime(RPIN_3, currentHours, currentMinutes, currentSeconds, chargerTime.hours, chargerTime.minutes, chargerTime.seconds);
-  getDifferenceTime(RPIN_4, currentHours, currentMinutes, currentSeconds, outletTime.hours, outletTime.minutes, outletTime.seconds);
+  getDifferenceTime(RPIN_4, fanIndefiniteOn, currentHours, currentMinutes, currentSeconds, fanTime.hours, fanTime.minutes, fanTime.seconds);
+  getDifferenceTime(RPIN_1, lightIndefiniteOn, currentHours, currentMinutes, currentSeconds, lightTime.hours, lightTime.minutes, lightTime.seconds);
+  getDifferenceTime(RPIN_2, chargerIndefiniteOn, currentHours, currentMinutes, currentSeconds, chargerTime.hours, chargerTime.minutes, chargerTime.seconds);
+  getDifferenceTime(RPIN_3, outletIndefiniteOn, currentHours, currentMinutes, currentSeconds, outletTime.hours, outletTime.minutes, outletTime.seconds);
 }
